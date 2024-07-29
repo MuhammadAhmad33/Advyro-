@@ -103,7 +103,7 @@ async function forgotPassword(req, res) {
             storeOTP(email, otp);
             await sendOTPEmail(email, otp);
             console.log(user);
-            return res.status(500).json({ otp, message: 'OTP sent to email'});
+            return res.status(500).json({ message: 'OTP sent to email'});
         }
     } catch (error) {
         console.error('Error resetting password:', error);
