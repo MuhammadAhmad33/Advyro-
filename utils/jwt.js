@@ -1,20 +1,21 @@
 const jwt = require('jsonwebtoken');
-
+const config = require('../config/config')
 // Function to generate JWT token
 function generateToken(userId) {
     const payload = {
         userId: userId,
     };
 
-    const secretKey = 'GSTaxi';
+    // Use a consistent and secure secret key
+    const secretKey = config.JWT_SECRET; // Consider using an environment variable for this
 
-    const options = {
-        expiresIn: '1h', // Token expires in 1 hour
-    };
-
-    const token = jwt.sign(payload, secretKey, options);
+    // Generate the token without expiration
+    const token = jwt.sign(payload, secretKey);
     return token;
 }
+
+module.exports = { generateToken };
+
 
 function decodeToken(req, res, next) {
     // Get token from request headers or query parameters

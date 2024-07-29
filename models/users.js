@@ -31,10 +31,22 @@ const UserSchema = new mongoose.Schema({
         type: String,
         enum: ['customer', 'mid admin', 'super admin'],
         default: 'customer',
-        required: true,
-    }
+    },
+    subscription: {
+        plan: {
+            type: String,
+            enum: ['basic', 'standard', 'pro'],
+            default: 'basic',
+        },
+        startDate: {
+            type: Date,
+            default: null,
+        },
+    },
+    businesses: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Business'
+    }]
 });
-
-
 
 module.exports = mongoose.model('User', UserSchema);

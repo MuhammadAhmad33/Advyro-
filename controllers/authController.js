@@ -1,4 +1,4 @@
-const User= require('../models/users');
+const User = require('../models/users');
 const { generateToken } = require('../utils/jwt');
 const bcrypt = require('bcryptjs');
 const { validationResult } = require('express-validator');
@@ -11,22 +11,18 @@ async function registerUser(req, res) {
 
     const { fullname, email, address, phoneNumber, password, confirmPassword, role } = req.body;
 
-    // Check if passwords match
     if (password !== confirmPassword) {
         return res.status(400).json({ message: 'Passwords do not match' });
     }
 
     try {
-        // Check if user already exists
         let user = await User.findOne({ email });
         if (user) {
             return res.status(400).json({ message: 'User already exists' });
         }
 
-        // Hash the password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Create new user
         const newUser = new User({
             fullname,
             email,
@@ -38,8 +34,7 @@ async function registerUser(req, res) {
         });
 
         const savedUser = await newUser.save();
-
-        const token = generateToken(newUser._id);
+        const token = generateToken(savedUser._id);
 
         res.status(201).json({ message: 'User registered successfully', user: savedUser, token });
     } catch (error) {
@@ -77,8 +72,6 @@ async function loginUser(req, res) {
     }
 }
 
-
-
 async function forgotPassword(req, res) {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -92,8 +85,7 @@ async function forgotPassword(req, res) {
 
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
-        }
-        else {
+        } else {
             console.log(user);
             return res.status(500).json({ message: 'User found' });
         }
@@ -110,8 +102,7 @@ async function resetPassword(req, res) {
     }
 
     const { id } = req.params;
-    const { newPassword } = req.body;
-    const { confirmPassword } = req.body;
+    const { newPassword, confirmPassword } = req.body;
 
     try {
         if (newPassword !== confirmPassword) {

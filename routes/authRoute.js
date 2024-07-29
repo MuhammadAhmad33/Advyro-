@@ -16,8 +16,9 @@ router.post('/register', [
         }
         return true;
     }).withMessage('Passwords do not match'),
-    check('role').isIn(['customer', 'mid admin', 'super admin']).withMessage('Invalid role')
+    check('role').optional().isIn(['customer', 'mid admin', 'super admin']).withMessage('Invalid role')
 ], authController.registerUser);
+
 
 router.post('/login', [
     check('email').isEmail().withMessage('Valid email is required'),
