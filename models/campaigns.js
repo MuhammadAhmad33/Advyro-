@@ -49,6 +49,10 @@ const CampaignSchema = new mongoose.Schema({
         enum: ['pending', 'approved', 'rejected'],
         default: 'pending',
     },
+    rejectionReason: {
+        type: String,
+        required: false,
+    },
 });
 
 module.exports = mongoose.model('Campaign', CampaignSchema);

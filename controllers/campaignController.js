@@ -91,36 +91,9 @@ async function getCampaigns(req, res) {
     }
 }
 
-async function updateCampaignStatus(req, res) {
-    const { campaignId, status } = req.body;
-    const userId = req.user._id;
 
-    if (!['approved', 'rejected'].includes(status)) {
-        return res.status(400).json({ message: 'Invalid status' });
-    }
-
-    try {
-        const user = await User.findById(userId);
-        if (user.role !== 'mid admin') {
-            return res.status(403).json({ message: 'You are not authorized to update campaign status' });
-        }
-
-        const campaign = await Campaign.findById(campaignId);
-        if (!campaign) {
-            return res.status(404).json({ message: 'Campaign not found' });
-        }
-
-        campaign.status = status;
-        await campaign.save();
-
-        res.status(200).json({ message: `Campaign ${status} successfully`, campaign });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-}
 
 module.exports = {
     createCampaign: [upload.single('adBanner'), createCampaign],
     getCampaigns,
-    updateCampaignStatus,
 };

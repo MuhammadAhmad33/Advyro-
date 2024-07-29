@@ -5,6 +5,7 @@ const authRoute = require('./routes/authRoute');
 const config = require('./config/config');
 const businessRoute = require('./routes/businessRoute')
 const campaignRoute = require('./routes/campaignRoutes')
+const midAdminRoute = require('./routes/midAdminRoutes')
 const app = express();
 
 app.use(express.json()); // Middleware for parsing JSON
@@ -17,6 +18,7 @@ mongoose.connect(config.mongoURI, {})
 app.use('/user', authRoute);
 app.use('/business',businessRoute)
 app.use('/campaign',campaignRoute)
+app.use('/midAdmin',midAdminRoute)
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error(err); // Log the error

@@ -39,10 +39,10 @@ const BusinessSchema = new mongoose.Schema({
         enum: ['pending', 'accepted', 'rejected'],
         default: 'pending',
     },
-    campaigns: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Campaign',
-    }],
+    rejectionReason: {
+        type: String,
+        required: false,
+    },
 });
 
 module.exports = mongoose.model('Business', BusinessSchema);
