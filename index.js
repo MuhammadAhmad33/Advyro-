@@ -10,9 +10,6 @@ const app = express();
 
 app.use(express.json()); // Middleware for parsing JSON
 
-mongoose.connect(config.mongoURI, {})
-    .then(() => console.log('MongoDB connected'))
-    .catch(err => console.error(err));
 
 // Use routes
 app.use('/user', authRoute);
@@ -24,6 +21,11 @@ app.use((err, req, res, next) => {
     console.error(err); // Log the error
     res.status(500).json({ message: err.message }); // Send error response
 });
+
+// Connect to MongoDB
+mongoose.connect(config.mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
+    .then(() => console.log('MongoDB connected'))
+    .catch(err => console.error(err));
 
 // Start the server
 const PORT = process.env.PORT || 7002;
