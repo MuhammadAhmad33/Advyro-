@@ -2,6 +2,10 @@ const User = require('../models/users');
 const { generateToken } = require('../utils/jwt');
 const bcrypt = require('bcryptjs');
 const { validationResult } = require('express-validator');
+const {sendEmail,sendOTPEmail} = require('../utils/sendEmail');
+const generateOTP = require('../utils/otpGenerator');
+const { storeOTP, verifyOTP } = require('../utils/otpVerifier');
+
 
 async function registerUser(req, res) {
     const errors = validationResult(req);
@@ -10,6 +14,12 @@ async function registerUser(req, res) {
     }
 
     const { fullname, email, address, phoneNumber, password, confirmPassword, role } = req.body;
+   
+    const subject = 'Registration Confirmation';
+    const confirmationMessage = `
+    Hi ${fullname}!
+    Thank you for signing up for our platform!
+    \nBest regards,\nAdvyro`;
 
     if (password !== confirmPassword) {
         return res.status(400).json({ message: 'Passwords do not match' });
@@ -32,6 +42,8 @@ async function registerUser(req, res) {
             confirmPassword: hashedPassword,
             role: role || 'customer'
         });
+
+        await sendEmail(email, subject, confirmationMessage);
 
         const savedUser = await newUser.save();
         const token = generateToken(savedUser._id);
@@ -86,8 +98,12 @@ async function forgotPassword(req, res) {
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         } else {
+            const otp = generateOTP();
+            console.log(otp);
+            storeOTP(email, otp);
+            await sendOTPEmail(email, otp);
             console.log(user);
-            return res.status(500).json({ message: 'User found' });
+            return res.status(500).json({ otp, message: 'OTP sent to email'});
         }
     } catch (error) {
         console.error('Error resetting password:', error);

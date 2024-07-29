@@ -1,6 +1,7 @@
 const express = require('express');
 const { check } = require('express-validator');
 const authController = require('../controllers/authController');
+const { verifyOTP } = require('../utils/otpVerifier');
 
 const router = express.Router();
 
@@ -32,5 +33,18 @@ router.post('/forgot-password', [
 router.post('/reset-password/:id', [
     check('newPassword').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long')
 ], authController.resetPassword);
+
+router.post('/verify-otp', [
+    check('email').isEmail().withMessage('Must be a valid email'),
+    check('otp').isLength({ min: 4, max: 4 }).withMessage('OTP must be 4 digits')
+  ], (req, res) => {
+    const { email, otp } = req.body;
+  
+    if (verifyOTP(email, otp)) {
+      return res.status(200).json({ message: 'OTP verified successfully' });
+    } else {
+      return res.status(400).json({ message: 'Invalid or expired OTP' });
+    }
+  });
 
 module.exports = router;
