@@ -9,7 +9,6 @@ const router = express.Router();
 router.post('/register', [
     check('fullname').not().isEmpty().withMessage('Full name is required'),
     check('email').isEmail().withMessage('Valid email is required'),
-    check('address').not().isEmpty().withMessage('Address is required'),
     check('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long'),
     check('confirmPassword').custom((value, { req }) => {
         if (value !== req.body.password) {

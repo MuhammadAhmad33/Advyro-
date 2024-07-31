@@ -13,7 +13,7 @@ async function registerUser(req, res) {
         return res.status(400).json({ errors: errors.array() });
     }
 
-    const { fullname, email, address, phoneNumber, password, confirmPassword, role } = req.body;
+    const { fullname, email, phoneNumber, password, confirmPassword, role } = req.body;
    
     const subject = 'Registration Confirmation';
     const confirmationMessage = `
@@ -36,7 +36,6 @@ async function registerUser(req, res) {
         const newUser = new User({
             fullname,
             email,
-            address,
             phoneNumber,
             password: hashedPassword,
             confirmPassword: hashedPassword,
@@ -133,8 +132,6 @@ async function resetPassword(req, res) {
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         user.password = hashedPassword;
         user.confirmPassword = hashedPassword;
-        user.resetPasswordToken = undefined;
-        user.resetPasswordExpires = undefined;
         console.log(user.password);
         await user.save();
 
