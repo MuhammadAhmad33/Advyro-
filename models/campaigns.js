@@ -1,5 +1,20 @@
 const mongoose = require('mongoose');
 
+const AnalyticsSchema = new mongoose.Schema({
+    date: {
+        type: Date,
+        required: true,
+    },
+    impressions: {
+        type: Number,
+        required: true,
+    },
+    clicks: {
+        type: Number,
+        required: true,
+    },
+});
+
 const CampaignSchema = new mongoose.Schema({
     adBanner: {
         type: String, // File path or URL
@@ -53,6 +68,7 @@ const CampaignSchema = new mongoose.Schema({
         type: String,
         required: false,
     },
+    analytics: [AnalyticsSchema], // Array of analytics data
 });
 
 module.exports = mongoose.model('Campaign', CampaignSchema);

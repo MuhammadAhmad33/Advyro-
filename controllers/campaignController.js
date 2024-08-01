@@ -1,6 +1,7 @@
 const Campaign = require('../models/campaigns');
 const Business = require('../models/business');
 const User = require('../models/users');
+const CustomDesignRequest = require('../models/designRequest');
 const multer = require('multer');
 const path = require('path');
 const moment = require('moment');
@@ -92,8 +93,27 @@ async function getCampaigns(req, res) {
 }
 
 
+async function requestMoreDesigns(req, res) {
+    const { description } = req.body;
+    const userId = req.user._id;
+
+    try {
+        const newRequest = new CustomDesignRequest({
+            user: userId,
+            description,
+            status: 'pending', // Initial status set to pending
+        });
+
+        const savedRequest = await newRequest.save();
+        res.status(201).json({ message: 'Design request submitted successfully', request: savedRequest });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+}
+
 
 module.exports = {
     createCampaign: [upload.single('adBanner'), createCampaign],
     getCampaigns,
+    requestMoreDesigns 
 };

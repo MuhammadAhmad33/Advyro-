@@ -25,5 +25,8 @@ router.post('/select-plan', [
 
 router.put('/edit', auth, businessController.editBusiness);
 
+// Route to delete a business
+router.delete('/delete-business/:businessId', auth, businessController.deleteBusiness);
+
 
 module.exports = router;

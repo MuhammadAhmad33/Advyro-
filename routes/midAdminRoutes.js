@@ -20,4 +20,19 @@ router.patch('/campaign/status', [
     check('rejectionReason').optional().notEmpty().withMessage('Rejection reason is required if status is rejected'),
 ], midAdminController.updateCampaignStatus);
 
+
+// Route to get all design requests
+router.get('/design-requests', midAdminController.getAllDesignRequests);
+
+router.get('/allBusinessesandCampaigns',midAdminController.getAllBusinessesWithCampaigns);
+// Route to update the status of a design request
+router.patch('/design-requests/:requestId', midAdminController.updateDesignRequestStatus);
+
+// Route to get businesses based on status
+router.get('/businesses/:status', midAdminController.getBusinessesByStatus);
+
+// Route to get campaigns based on status
+router.get('/campaigns/:status', midAdminController.getCampaignsByStatus);
+router.post('/campaigns/:campaignId/analytics', midAdminController.addAnalyticsData);
+
 module.exports = router;

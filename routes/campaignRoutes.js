@@ -6,8 +6,10 @@ const campaignController = require('../controllers/campaignController');
 // Route to create a new campaign
 router.post('/add', auth, campaignController.createCampaign);
 
+router.post('/request-designs', auth, campaignController.requestMoreDesigns);
+
 // Route to get all campaigns for a specific business
-router.get('/business/:businessId', auth, campaignController.getCampaigns);
+router.get('/business/:businessId',campaignController.getCampaigns);
 
 
 module.exports = router;

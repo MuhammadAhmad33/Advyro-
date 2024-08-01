@@ -158,10 +158,42 @@ async function editBusiness(req, res) {
         res.status(500).json({ message: error.message });
     }
 }
+async function deleteBusiness(req, res) {
+    const { businessId } = req.params; // Get the business ID from the request parameters
+    const userId = req.user._id; // Ensure `req.user` has the `_id` property
+
+    try {
+        // Find the business by ID
+        const business = await Business.findById(businessId);
+
+        if (!business) {
+            return res.status(404).json({ message: 'Business not found' });
+        }
+
+        // Check if the user is the owner of the business
+        if (business.owner.toString() !== userId.toString()) {
+            return res.status(403).json({ message: 'You are not authorized to delete this business' });
+        }
+
+        // Remove the business from the database
+        await Business.findByIdAndDelete(businessId);
+
+        // Optionally, you can also remove the business ID from the user's businesses array
+        const user = await User.findById(userId);
+        user.businesses = user.businesses.filter(b => b.toString() !== businessId);
+        await user.save();
+
+        res.status(200).json({ message: 'Business deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+}
+
 
 module.exports = {
     addBusiness: [upload, addBusiness],
     getUserBusinesses,
     selectSubscriptionPlan,
-    editBusiness: [upload, editBusiness]
+    editBusiness: [upload, editBusiness],
+    deleteBusiness
 };
