@@ -15,10 +15,15 @@ async function registerUser(req, res) {
 
     const { fullname, email, phoneNumber, password, confirmPassword, role } = req.body;
    
+    const otp = generateOTP();
+            console.log(otp);
+            storeOTP(email, otp);
+            
     const subject = 'Registration Confirmation';
     const confirmationMessage = `
     Hi ${fullname}!
     Thank you for signing up for our platform!
+    \nYour OTP code is: ${otp}
     \nBest regards,\nAdvyro`;
 
     if (password !== confirmPassword) {
