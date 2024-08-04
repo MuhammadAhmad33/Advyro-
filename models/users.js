@@ -31,8 +31,7 @@ const UserSchema = new mongoose.Schema({
     subscription: {
         plan: {
             type: String,
-            enum: ['basic', 'standard', 'pro'],
-            default: 'basic',
+            enum: ['basic', 'standard', 'pro']
         },
         startDate: {
             type: Date,
@@ -42,7 +41,11 @@ const UserSchema = new mongoose.Schema({
     businesses: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Business'
-    }]
+    }],
+    coinBalance: {
+        type: Number,
+        default: 0
+    },
 });
 
 module.exports = mongoose.model('User', UserSchema);

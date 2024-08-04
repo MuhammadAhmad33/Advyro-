@@ -23,6 +23,16 @@ router.post('/select-plan', [
     check('plan').isIn(['basic', 'standard', 'pro']).withMessage('Invalid subscription plan'),
 ], businessController.selectSubscriptionPlan);
 
+// New route for payment success
+router.get('/payment-success', 
+    auth, 
+    [
+        check('session_id').notEmpty().withMessage('Session ID is required'),
+        check('plan').isIn(['basic', 'standard', 'pro']).withMessage('Invalid subscription plan')
+    ],
+    businessController.confirmPaymentAndUpdateSubscription
+);
+
 router.put('/edit', auth, businessController.editBusiness);
 
 // Route to delete a business

@@ -8,6 +8,8 @@ router.post('/add', auth, campaignController.createCampaign);
 
 router.post('/request-designs', auth, campaignController.requestMoreDesigns);
 
+router.post('/pay-fee', auth, campaignController.payCampaignFee);
+
 // Route to get all campaigns for a specific business
 router.get('/business/:businessId',campaignController.getCampaigns);
 

@@ -2,6 +2,9 @@ const User = require('../models/users');
 const Business = require('../models/business');
 const multer = require('multer');
 const path = require('path');
+const config=require('../config/config')
+const stripe = require('stripe')(config.STRIPE_SECRET_KEY);
+
 
 // Set up Multer for file uploads
 const storage = multer.diskStorage({
@@ -46,6 +49,10 @@ async function addBusiness(req, res) {
         const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
+        }
+        if (!user.subscription.plan) {
+            return res.status(404).json({ message: 'Get a subscription first!' });
+
         }
 
         const allowedBusinessCount = planLimits[user.subscription.plan] || 0; // Default to 0 if no plan set
@@ -92,32 +99,101 @@ async function getUserBusinesses(req, res) {
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
-}
+};
 
-async function selectSubscriptionPlan(req, res) {
-    const { plan } = req.body;
-    const userId = req.user._id; // Ensure `req.user` has the `_id` property
 
-    if (!['basic', 'standard', 'pro'].includes(plan)) {
-        return res.status(400).json({ message: 'Invalid subscription plan' });
-    }
+// Prices for the subscription plans in the smallest currency unit (cents for USD)
+const prices = {
+    basic: 1000,   // $10
+    standard: 2500, // $25
+    pro: 5000,     // $50
+};
 
+const selectSubscriptionPlan = async (req, res) => {
     try {
-        const user = await User.findById(userId);
-
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
+        const { plan } = req.body;
+        
+        if (!plan) {
+            return res.status(400).json({ error: 'Plan is required' });
         }
 
-        user.subscription.plan = plan;
-        user.subscription.startDate = Date.now();
-        await user.save();
+        const userId = req.user._id;
 
-        res.status(200).json({ message: 'Subscription plan selected successfully', subscription: user.subscription });
+        if (!userId) {
+            return res.status(400).json({ error: 'User ID is required' });
+        }
+
+        if (!prices[plan]) {
+            return res.status(400).json({ error: 'Invalid subscription plan' });
+        }
+
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: [{
+                price_data: {
+                    currency: 'usd',
+                    product_data: {
+                        name: `${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan`,
+                    },
+                    unit_amount: prices[plan],
+                },
+                quantity: 1,
+            }],
+            mode: 'payment',
+            success_url: `http://localhost:7002/payment-success?session_id={CHECKOUT_SESSION_ID}&plan=${plan}`,
+            cancel_url: `http://localhost:7002/payment-cancel`,
+            client_reference_id: userId.toString(), // Add user ID as a reference
+        });
+
+        console.log('Checkout Session created:', session.id);
+        res.status(200).json({ 
+            sessionId: session.id,
+            checkoutUrl:session.url
+        });
+    } catch (error) {
+        console.error('Error in selectSubscriptionPlan:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+const confirmPaymentAndUpdateSubscription = async (req, res) => {
+    const { session_id, plan } = req.query;
+
+    try {
+        // Retrieve the session from Stripe using the session ID
+        const session = await retrieveSession(session_id);
+        console.log(session)
+
+        // Check if the payment was successful
+        if (session.payment_status === 'paid') {
+            // Update user subscription in the database
+            const user = await User.findById(req.user._id);
+
+            if (user) {
+                user.subscription.plan = plan;
+                user.subscription.startDate = Date.now();
+                await user.save();
+
+                res.status(200).json({ message: 'Subscription plan updated successfully', subscription: user.subscription });
+            } else {
+                res.status(404).json({ message: 'User not found' });
+            }
+        } else {
+            res.status(400).json({ message: 'Payment not completed' });
+        }
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
+};
+
+async function retrieveSession(sessionId) {
+    try {
+        return await stripe.checkout.sessions.retrieve(sessionId);
+    } catch (error) {
+        throw new Error(`Failed to retrieve session: ${error.message}`);
+    }
 }
+
 async function editBusiness(req, res) {
     const { businessId, name, phone, location, targetMapArea, description, removeGalleryItems } = req.body;
     const userId = req.user._id; // Ensure `req.user` has the `_id` property
@@ -157,7 +233,8 @@ async function editBusiness(req, res) {
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
-}
+};
+
 async function deleteBusiness(req, res) {
     const { businessId } = req.params; // Get the business ID from the request parameters
     const userId = req.user._id; // Ensure `req.user` has the `_id` property
@@ -187,13 +264,14 @@ async function deleteBusiness(req, res) {
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
-}
+};
 
 
 module.exports = {
     addBusiness: [upload, addBusiness],
     getUserBusinesses,
     selectSubscriptionPlan,
+    confirmPaymentAndUpdateSubscription,
     editBusiness: [upload, editBusiness],
-    deleteBusiness
+    deleteBusiness,
 };

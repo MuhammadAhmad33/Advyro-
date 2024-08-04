@@ -66,15 +66,73 @@ async function createCampaign(req, res) {
             startTime,
             endTime,
             status: 'pending', // Set initial status to pending
+            feePaid: false // Set initial feePaid to false
         });
 
         const savedCampaign = await newCampaign.save();
 
-        res.status(201).json({ message: 'Campaign created successfully', campaign: savedCampaign });
+        // Fetch user's coin balance
+        const user = await User.findById(userId);
+        const coinBalance = user.coinBalance;
+        const campaignFee = 1200; // Campaign fee in coins
+
+        res.status(201).json({
+            message: 'Campaign created successfully. Please proceed to payment.',
+            campaign: savedCampaign,
+            coinBalance: coinBalance,
+            campaignFee: campaignFee,
+            paymentRequired: true
+        });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 }
+
+async function payCampaignFee(req, res) {
+    const { campaignId } = req.body;
+    const userId = req.user._id;
+    console.log(req.body)
+
+    try {
+        const user = await User.findById(userId);
+        const campaign = await Campaign.findById(campaignId).populate('business');
+
+        if (!campaign) {
+            return res.status(404).json({ message: 'Campaign not found' });
+        }
+
+        if (campaign.business.owner.toString() !== userId.toString()) {
+            return res.status(403).json({ message: 'You are not authorized to pay for this campaign' });
+        }
+
+        const campaignFee = 1200; // Campaign fee in coins
+
+        if (user.coinBalance < campaignFee) {
+
+            return res.status(200).json({
+                message: 'Insufficient coins. Please Recharge.',
+                coinShortage: campaignFee - user.coinBalance
+            });
+        } else {
+            // If user has enough coins, deduct from balance and activate campaign
+            user.coinBalance -= campaignFee;
+            await user.save();
+
+            campaign.status = 'active';
+            campaign.feePaid = true;
+            await campaign.save();
+
+            return res.status(200).json({
+                message: 'Campaign fee paid successfully with coins',
+                newCoinBalance: user.coinBalance,
+                campaignStatus: campaign.status
+            });
+        }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+}
+
 
 async function getCampaigns(req, res) {
     const businessId = req.params.businessId;
@@ -91,7 +149,6 @@ async function getCampaigns(req, res) {
         res.status(500).json({ message: error.message });
     }
 }
-
 
 async function requestMoreDesigns(req, res) {
     const { description } = req.body;
@@ -115,5 +172,6 @@ async function requestMoreDesigns(req, res) {
 module.exports = {
     createCampaign: [upload.single('adBanner'), createCampaign],
     getCampaigns,
-    requestMoreDesigns 
+    requestMoreDesigns,
+    payCampaignFee,
 };
