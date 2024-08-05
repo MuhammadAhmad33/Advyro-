@@ -43,6 +43,27 @@ const BusinessSchema = new mongoose.Schema({
         type: String,
         required: false,
     },
+    // New fields
+    websiteUrl: {
+        type: String,
+        required: false,
+    },
+    facebookUrl: {
+        type: String,
+        required: false,
+    },
+    instagramUrl: {
+        type: String,
+        required: false,
+    },
+    linkedinUrl: {
+        type: String,
+        required: false,
+    },
+    tiktokUrl: {
+        type: String,
+        required: false,
+    }
 });
 
 module.exports = mongoose.model('Business', BusinessSchema);

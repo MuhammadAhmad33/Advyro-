@@ -29,10 +29,6 @@ const CampaignSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    websiteUrl: {
-        type: String,
-        required: true,
-    },
     campaignDesc: {
         type: String,
         required: true,
@@ -61,7 +57,7 @@ const CampaignSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['pending', 'approved', 'rejected'],
+        enum: ['pending', 'approved', 'rejected', 'active', 'cancelled'],
         default: 'pending',
     },
     rejectionReason: {

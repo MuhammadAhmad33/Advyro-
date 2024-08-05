@@ -10,8 +10,12 @@ router.post('/request-designs', auth, campaignController.requestMoreDesigns);
 
 router.post('/pay-fee', auth, campaignController.payCampaignFee);
 
+router.post('/cancel', auth, campaignController.cancelCampaign);
+
+router.get('/campaignsByStatus', auth, campaignController.getCampaignsByStatus);
+
 // Route to get all campaigns for a specific business
-router.get('/business/:businessId',campaignController.getCampaigns);
+router.get('/business/:businessId',auth,campaignController.getCampaigns);
 
 
 module.exports = router;

@@ -32,6 +32,7 @@ const upload = multer({
     }
 }).fields([
     { name: 'gallery', maxCount: 10 }, // Adjust maxCount as needed
+    { name: 'logo', maxCount: 1 },
     { name: 'removeGalleryItems' }
 ]);
 
@@ -42,7 +43,18 @@ const planLimits = {
 };
 
 async function addBusiness(req, res) {
-    const { name, phone, location, targetMapArea, description } = req.body;
+    const { 
+        name, 
+        phone, 
+        location, 
+        targetMapArea, 
+        description, 
+        websiteUrl, 
+        facebookUrl, 
+        instagramUrl, 
+        linkedinUrl, 
+        tiktokUrl 
+    } = req.body;
     const userId = req.user._id; // Ensure `req.user` has the `_id` property
 
     try {
@@ -52,7 +64,6 @@ async function addBusiness(req, res) {
         }
         if (!user.subscription.plan) {
             return res.status(404).json({ message: 'Get a subscription first!' });
-
         }
 
         const allowedBusinessCount = planLimits[user.subscription.plan] || 0; // Default to 0 if no plan set
@@ -74,6 +85,11 @@ async function addBusiness(req, res) {
             logo,
             owner: userId,
             status: 'pending', // Set status to pending on creation
+            websiteUrl,
+            facebookUrl,
+            instagramUrl,
+            linkedinUrl,
+            tiktokUrl
         });
 
         const savedBusiness = await newBusiness.save();
@@ -85,7 +101,6 @@ async function addBusiness(req, res) {
         res.status(500).json({ message: error.message });
     }
 }
-
 async function getUserBusinesses(req, res) {
     const userId = req.user._id; // Ensure `req.user` has the `_id` property
 
@@ -100,7 +115,6 @@ async function getUserBusinesses(req, res) {
         res.status(500).json({ message: error.message });
     }
 };
-
 
 // Prices for the subscription plans in the smallest currency unit (cents for USD)
 const prices = {
@@ -195,7 +209,20 @@ async function retrieveSession(sessionId) {
 }
 
 async function editBusiness(req, res) {
-    const { businessId, name, phone, location, targetMapArea, description, removeGalleryItems } = req.body;
+    const { 
+        businessId, 
+        name, 
+        phone, 
+        location, 
+        targetMapArea, 
+        description, 
+        removeGalleryItems,
+        websiteUrl,
+        facebookUrl,
+        instagramUrl,
+        linkedinUrl,
+        tiktokUrl
+    } = req.body;
     const userId = req.user._id; // Ensure `req.user` has the `_id` property
 
     try {
@@ -216,6 +243,13 @@ async function editBusiness(req, res) {
         if (targetMapArea) business.targetMapArea = targetMapArea;
         if (description) business.description = description;
 
+        // Update new fields
+        if (websiteUrl !== undefined) business.websiteUrl = websiteUrl;
+        if (facebookUrl !== undefined) business.facebookUrl = facebookUrl;
+        if (instagramUrl !== undefined) business.instagramUrl = instagramUrl;
+        if (linkedinUrl !== undefined) business.linkedinUrl = linkedinUrl;
+        if (tiktokUrl !== undefined) business.tiktokUrl = tiktokUrl;
+
         // Remove gallery items
         if (removeGalleryItems && Array.isArray(removeGalleryItems)) {
             business.gallery = business.gallery.filter(item => !removeGalleryItems.includes(item));
@@ -227,13 +261,18 @@ async function editBusiness(req, res) {
             business.gallery.push(...newGalleryItems);
         }
 
+        // Update logo if provided
+        if (req.files && req.files.logo) {
+            business.logo = req.files.logo[0].path;
+        }
+
         await business.save();
 
         res.status(200).json({ message: 'Business updated successfully', business });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
-};
+}
 
 async function deleteBusiness(req, res) {
     const { businessId } = req.params; // Get the business ID from the request parameters

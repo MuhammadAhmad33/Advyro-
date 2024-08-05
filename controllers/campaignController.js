@@ -32,7 +32,7 @@ function isValidDuration(startTime, endTime) {
 }
 
 async function createCampaign(req, res) {
-    const { businessId, adsName, websiteUrl, campaignDesc, campaignPlatforms, startDate, endDate, startTime, endTime } = req.body;
+    const { businessId, adsName, campaignDesc, campaignPlatforms, startDate, endDate, startTime, endTime } = req.body;
     const userId = req.user._id;
 
     try {
@@ -56,7 +56,6 @@ async function createCampaign(req, res) {
             adBanner,
             business: businessId,
             adsName,
-            websiteUrl,
             campaignDesc,
             campaignPlatforms,
             dateSchedule: {
@@ -168,10 +167,70 @@ async function requestMoreDesigns(req, res) {
     }
 }
 
+async function cancelCampaign(req, res) {
+    const { campaignId } = req.body; // No need for cancellation reason
+    const userId = req.user._id; // Ensure `req.user` has the `_id` property
+
+    try {
+        const campaign = await Campaign.findById(campaignId).populate('business');
+
+        if (!campaign) {
+            return res.status(404).json({ message: 'Campaign not found' });
+        }
+
+        if (campaign.business.owner.toString() !== userId.toString()) {
+            return res.status(403).json({ message: 'You are not authorized to cancel this campaign' });
+        }
+
+        // Change the status to 'cancelled'
+        campaign.status = 'cancelled';
+
+        await campaign.save();
+
+        res.status(200).json({ 
+            message: 'Campaign cancelled successfully', 
+            campaign 
+        });
+
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+}
+
+async function getCampaignsByStatus(req, res) {
+    const userId = req.user._id; // Ensure `req.user` has the `_id` property
+    const now = new Date();
+
+    try {
+        // Find previous pending campaigns
+        const previousPendingCampaigns = await Campaign.find({
+            owner: userId,
+            status: 'pending',
+            'dateSchedule.endDate': { $lt: now }
+        });
+
+        // Find current active campaigns
+        const currentActiveCampaigns = await Campaign.find({
+            owner: userId,
+            status: 'active',
+            'dateSchedule.startDate': { $lte: now },
+            'dateSchedule.endDate': { $gte: now }
+        });
+
+        res.status(200).json({
+            previousPendingCampaigns,
+            currentActiveCampaigns
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+}
 
 module.exports = {
     createCampaign: [upload.single('adBanner'), createCampaign],
     getCampaigns,
     requestMoreDesigns,
     payCampaignFee,
+    cancelCampaign,
+    getCampaignsByStatus
 };
