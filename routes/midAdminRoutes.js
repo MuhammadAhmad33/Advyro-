@@ -24,7 +24,7 @@ router.patch('/campaign/status', [
 // Route to get all design requests
 router.get('/design-requests', midAdminController.getAllDesignRequests);
 
-router.get('/allBusinessesandCampaigns',midAdminController.getAllBusinessesWithCampaigns);
+router.get('/allBusinessesandCampaigns', midAdminController.getAllBusinessesWithCampaigns);
 // Route to update the status of a design request
 router.patch('/design-requests/:requestId', midAdminController.updateDesignRequestStatus);
 
@@ -33,6 +33,8 @@ router.get('/businesses/:status', midAdminController.getBusinessesByStatus);
 
 // Route to get campaigns based on status
 router.get('/campaigns/:status', midAdminController.getCampaignsByStatus);
+router.post('/upload-design', auth, midAdminController.uploadDesign);
 router.post('/campaigns/:campaignId/analytics', midAdminController.addAnalyticsData);
+
 
 module.exports = router;

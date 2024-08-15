@@ -1,7 +1,68 @@
+const { BlobServiceClient } = require('@azure/storage-blob');
 const User = require('../models/users');
 const Business = require('../models/business');
 const Campaign = require('../models/campaigns');
 const CustomDesignRequest = require('../models/designRequest');
+const multer = require('multer');
+const path = require('path');
+const AdBannerDesign = require('../models/designs');
+const config = require('../config/config')
+
+// Azure Blob Storage setup
+const blobServiceClient = BlobServiceClient.fromConnectionString(config.AZURE_STORAGE_CONNECTION_STRING);
+const containerClient = blobServiceClient.getContainerClient(config.AZURE_CONTAINER_NAME);
+
+// Set up Multer for file uploads
+const storage = multer.memoryStorage(); // or diskStorage depending on your setup
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 10 * 1024 * 1024 }, // Limit file size (e.g., 10MB)
+}).array('designs', 10); // Handle up to 10 files, field name is 'designs'
+
+
+async function uploadToAzureBlob(fileBuffer, fileName) {
+    const blockBlobClient = containerClient.getBlockBlobClient(fileName);
+    await blockBlobClient.uploadData(fileBuffer);
+    return blockBlobClient.url;
+}
+
+
+// Function to handle design upload
+async function uploadDesign(req, res) {
+    const userId = req.user._id; // Ensure `req.user` has the `_id` property
+
+    try {
+        // Check if user is a mid admin
+        const user = await User.findById(userId);
+        if (user.role !== 'mid admin') {
+            return res.status(403).json({ message: 'You are not authorized to upload designs' });
+        }
+
+        // Ensure files are uploaded
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ message: 'No files uploaded' });
+        }
+
+        // Handle multiple files
+        const designUrls = [];
+        for (const file of req.files) {
+            const designUrl = await uploadToAzureBlob(file.buffer, Date.now() + path.extname(file.originalname));
+            designUrls.push(designUrl);
+        }
+
+        // Save design info to the database
+        const newDesigns = designUrls.map(designUrl => ({
+            fileUrl: designUrl,
+            uploadedBy: userId
+        }));
+
+        const savedDesigns = await AdBannerDesign.insertMany(newDesigns);
+
+        res.status(201).json({ message: 'Designs uploaded successfully', designs: savedDesigns });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+}
 
 
 async function changeBusinessStatus(req, res) {
@@ -69,7 +130,6 @@ async function updateCampaignStatus(req, res) {
         res.status(500).json({ message: error.message });
     }
 }
-
 
 // Function to get all design requests
 async function getAllDesignRequests(req, res) {
@@ -199,4 +259,5 @@ module.exports = {
     getBusinessesByStatus,
     getCampaignsByStatus,
     addAnalyticsData,
+    uploadDesign:[upload,uploadDesign]
 };

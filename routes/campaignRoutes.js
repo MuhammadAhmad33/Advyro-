@@ -12,7 +12,10 @@ router.post('/pay-fee', auth, campaignController.payCampaignFee);
 
 router.post('/cancel', auth, campaignController.cancelCampaign);
 
+router.get('/allDesigns',campaignController.getAllDesigns)
+
 router.get('/campaignsByStatus', auth, campaignController.getCampaignsByStatus);
+
 
 // Route to get all campaigns for a specific business
 router.get('/business/:businessId',auth,campaignController.getCampaigns);

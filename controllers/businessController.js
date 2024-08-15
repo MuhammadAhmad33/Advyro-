@@ -1,3 +1,4 @@
+const { BlobServiceClient } = require('@azure/storage-blob');
 const User = require('../models/users');
 const Business = require('../models/business');
 const multer = require('multer');
@@ -5,22 +6,16 @@ const path = require('path');
 const config=require('../config/config')
 const stripe = require('stripe')(config.STRIPE_SECRET_KEY);
 
+// Azure Blob Storage setup
+const blobServiceClient = BlobServiceClient.fromConnectionString(config.AZURE_STORAGE_CONNECTION_STRING);
+const containerClient = blobServiceClient.getContainerClient(config.AZURE_CONTAINER_NAME);
 
-// Set up Multer for file uploads
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, 'uploads/'); // Change this to your desired upload directory
-    },
-    filename: function (req, file, cb) {
-        cb(null, Date.now() + path.extname(file.originalname));
-    },
-});
-
+// Multer setup (if you still want to process files locally before upload)
+const storage = multer.memoryStorage(); // Store files in memory
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB limit
+    limits: { fileSize: 10 * 1024 * 1024 },
     fileFilter: function (req, file, cb) {
-        // Accept only specific file types
         const filetypes = /jpeg|jpg|png|gif/;
         const mimetype = filetypes.test(file.mimetype);
         const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
@@ -31,9 +26,8 @@ const upload = multer({
         cb(new Error('Only images are allowed'));
     }
 }).fields([
-    { name: 'gallery', maxCount: 10 }, // Adjust maxCount as needed
-    { name: 'logo', maxCount: 1 },
-    { name: 'removeGalleryItems' }
+    { name: 'gallery', maxCount: 10 },
+    { name: 'logo', maxCount: 1 }
 ]);
 
 const planLimits = {
@@ -42,20 +36,19 @@ const planLimits = {
     pro: 10,
 };
 
+
+async function uploadToAzureBlob(fileBuffer, fileName) {
+    const blockBlobClient = containerClient.getBlockBlobClient(fileName);
+    await blockBlobClient.uploadData(fileBuffer);
+    return blockBlobClient.url;
+}
+
 async function addBusiness(req, res) {
     const { 
-        name, 
-        phone, 
-        location, 
-        targetMapArea, 
-        description, 
-        websiteUrl, 
-        facebookUrl, 
-        instagramUrl, 
-        linkedinUrl, 
-        tiktokUrl 
+        name, phone, location, targetMapArea, description,
+        websiteUrl, facebookUrl, instagramUrl, linkedinUrl, tiktokUrl 
     } = req.body;
-    const userId = req.user._id; // Ensure `req.user` has the `_id` property
+    const userId = req.user._id;
 
     try {
         const user = await User.findById(userId);
@@ -66,41 +59,43 @@ async function addBusiness(req, res) {
             return res.status(404).json({ message: 'Get a subscription first!' });
         }
 
-        const allowedBusinessCount = planLimits[user.subscription.plan] || 0; // Default to 0 if no plan set
+        const allowedBusinessCount = planLimits[user.subscription.plan] || 0;
         if (user.businesses.length >= allowedBusinessCount) {
             return res.status(400).json({ message: 'Business limit reached for your subscription plan' });
         }
 
-        // Handle file uploads
-        const gallery = req.files.gallery ? req.files.gallery.map(file => file.path) : [];
-        const logo = req.files.logo ? req.files.logo[0].path : '';
+        const gallery = [];
+        let logo = '';
+
+        if (req.files.gallery) {
+            for (const file of req.files.gallery) {
+                const url = await uploadToAzureBlob(file.buffer, Date.now() + path.extname(file.originalname));
+                gallery.push(url);
+                console.log(url)
+            }
+        }
+
+        if (req.files.logo) {
+            logo = await uploadToAzureBlob(req.files.logo[0].buffer, Date.now() + path.extname(req.files.logo[0].originalname));
+        }
 
         const newBusiness = new Business({
-            name,
-            phone,
-            location,
-            targetMapArea,
-            description,
-            gallery,
-            logo,
-            owner: userId,
-            status: 'pending', // Set status to pending on creation
-            websiteUrl,
-            facebookUrl,
-            instagramUrl,
-            linkedinUrl,
-            tiktokUrl
+            name, phone, location, targetMapArea, description,
+            gallery, logo, owner: userId, status: 'pending',
+            websiteUrl, facebookUrl, instagramUrl, linkedinUrl, tiktokUrl
         });
 
         const savedBusiness = await newBusiness.save();
         user.businesses.push(savedBusiness._id);
         await user.save();
+        console.log(savedBusiness)
 
         res.status(201).json({ message: 'Business added successfully', business: savedBusiness });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 }
+
 async function getUserBusinesses(req, res) {
     const userId = req.user._id; // Ensure `req.user` has the `_id` property
 
@@ -216,56 +211,72 @@ async function editBusiness(req, res) {
         location, 
         targetMapArea, 
         description, 
-        removeGalleryItems,
+        removeGalleryItems, // Array of URLs to remove
         websiteUrl,
         facebookUrl,
         instagramUrl,
         linkedinUrl,
         tiktokUrl
     } = req.body;
-    const userId = req.user._id; // Ensure `req.user` has the `_id` property
+    const userId = req.user._id;
 
     try {
+        // Get business object from DB
         const business = await Business.findById(businessId);
-
         if (!business) {
             return res.status(404).json({ message: 'Business not found' });
         }
 
+        // Ensure user is authorized
         if (business.owner.toString() !== userId.toString()) {
             return res.status(403).json({ message: 'You are not authorized to edit this business' });
         }
 
-        // Update business fields
+        // Update business fields if provided
         if (name) business.name = name;
         if (phone) business.phone = phone;
         if (location) business.location = location;
         if (targetMapArea) business.targetMapArea = targetMapArea;
         if (description) business.description = description;
 
-        // Update new fields
+        // Update URLs if provided
         if (websiteUrl !== undefined) business.websiteUrl = websiteUrl;
         if (facebookUrl !== undefined) business.facebookUrl = facebookUrl;
         if (instagramUrl !== undefined) business.instagramUrl = instagramUrl;
         if (linkedinUrl !== undefined) business.linkedinUrl = linkedinUrl;
         if (tiktokUrl !== undefined) business.tiktokUrl = tiktokUrl;
 
-        // Remove gallery items
+        // Remove gallery items from Azure Blob Storage
         if (removeGalleryItems && Array.isArray(removeGalleryItems)) {
-            business.gallery = business.gallery.filter(item => !removeGalleryItems.includes(item));
+            for (const url of removeGalleryItems) {
+                // Extract the filename from the URL
+                const fileName = url.split('/').pop();
+                
+                // Delete the blob from Azure
+                await deleteFromAzureBlob(fileName);
+                
+                // Remove the URL from the gallery array
+                business.gallery = business.gallery.filter(item => item !== url);
+            }
         }
 
-        // Add new gallery items
+        // Add new gallery items to Azure Blob Storage
         if (req.files && req.files.gallery) {
-            const newGalleryItems = req.files.gallery.map(file => file.path);
-            business.gallery.push(...newGalleryItems);
+            for (const file of req.files.gallery) {
+                const fileName = `${Date.now()}${path.extname(file.originalname)}`;
+                const fileUrl = await uploadToAzureBlob(file.buffer, fileName);
+                business.gallery.push(fileUrl); // Add new URL to gallery
+            }
         }
 
-        // Update logo if provided
+        // Update logo in Azure Blob Storage
         if (req.files && req.files.logo) {
-            business.logo = req.files.logo[0].path;
+            const logoFile = req.files.logo[0];
+            const logoFileName = `${Date.now()}${path.extname(logoFile.originalname)}`;
+            business.logo = await uploadToAzureBlob(logoFile.buffer, logoFileName); // Update logo URL
         }
 
+        // Save updated business object
         await business.save();
 
         res.status(200).json({ message: 'Business updated successfully', business });

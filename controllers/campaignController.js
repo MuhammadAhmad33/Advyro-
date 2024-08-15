@@ -1,34 +1,38 @@
 const Campaign = require('../models/campaigns');
 const Business = require('../models/business');
 const User = require('../models/users');
+const AdBannerDesign=require('../models/designs')
 const CustomDesignRequest = require('../models/designRequest');
 const multer = require('multer');
+const { BlobServiceClient } = require('@azure/storage-blob');
 const path = require('path');
-const moment = require('moment');
+const config=require('../config/config')
 
-// Set up Multer for file uploads
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, 'uploads/'); // Change this to your desired upload directory
-    },
-    filename: function (req, file, cb) {
-        cb(null, Date.now() + path.extname(file.originalname));
-    },
-});
+// Azure Blob Storage setup
+const blobServiceClient = BlobServiceClient.fromConnectionString(config.AZURE_STORAGE_CONNECTION_STRING);
+const containerClient = blobServiceClient.getContainerClient(config.AZURE_CONTAINER_NAME);
 
-const upload = multer({ storage: storage });
+// Multer setup to store files in memory
+const storage = multer.memoryStorage(); 
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 10 * 1024 * 1024 },
+    fileFilter: function (req, file, cb) {
+        const filetypes = /jpeg|jpg|png|gif/;
+        const mimetype = filetypes.test(file.mimetype);
+        const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
 
-function isValidDuration(startTime, endTime) {
-    const start = moment(startTime, "HH:mm");
-    const end = moment(endTime, "HH:mm");
-
-    // Check if the end time is before the start time (next day scenario)
-    if (end.isBefore(start)) {
-        end.add(1, 'day');
+        if (mimetype && extname) {
+            return cb(null, true);
+        }
+        cb(new Error('Only images are allowed'));
     }
+}).single('adBanner'); // Adjust the field name as per your form
 
-    const duration = moment.duration(end.diff(start)).asHours();
-    return duration >= 8;
+async function uploadToAzureBlob(fileBuffer, fileName) {
+    const blockBlobClient = containerClient.getBlockBlobClient(fileName);
+    await blockBlobClient.uploadData(fileBuffer);
+    return blockBlobClient.url;
 }
 
 async function createCampaign(req, res) {
@@ -46,14 +50,14 @@ async function createCampaign(req, res) {
             return res.status(403).json({ message: 'You are not authorized to create a campaign for this business' });
         }
 
-        if (!isValidDuration(startTime, endTime)) {
-            return res.status(400).json({ message: 'Time duration must be at least 8 hours' });
+        let adBannerUrl = null;
+        if (req.file) {
+            const fileName = `${Date.now()}${path.extname(req.file.originalname)}`;
+            adBannerUrl = await uploadToAzureBlob(req.file.buffer, fileName);
         }
 
-        const adBanner = req.file ? req.file.path : null;
-
         const newCampaign = new Campaign({
-            adBanner,
+            adBanner: adBannerUrl,
             business: businessId,
             adsName,
             campaignDesc,
@@ -86,6 +90,7 @@ async function createCampaign(req, res) {
         res.status(500).json({ message: error.message });
     }
 }
+
 
 async function payCampaignFee(req, res) {
     const { campaignId } = req.body;
@@ -226,11 +231,23 @@ async function getCampaignsByStatus(req, res) {
     }
 }
 
+async function getAllDesigns(req, res) {
+    try {
+        // Retrieve all design records from the database
+        const designs = await AdBannerDesign.find().populate('uploadedBy', 'fullname email'); // Populate user details
+
+        res.status(200).json({ designs });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+}
+
 module.exports = {
-    createCampaign: [upload.single('adBanner'), createCampaign],
+    createCampaign: [upload, createCampaign],
     getCampaigns,
     requestMoreDesigns,
     payCampaignFee,
     cancelCampaign,
-    getCampaignsByStatus
+    getCampaignsByStatus,
+    getAllDesigns
 };
