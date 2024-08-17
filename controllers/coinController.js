@@ -1,19 +1,9 @@
+// controllers/coinController.js
 const User = require('../models/users');
-const Business = require('../models/business');
-const config=require('../config/config')
+const Coin = require('../models/coin');
+const config = require('../config/config');
 const stripe = require('stripe')(config.STRIPE_SECRET_KEY);
 const { validationResult } = require('express-validator');
-
-
-const coinPrices = {
-    100: 128,   // $1.28
-    250: 320,   // $3.20
-    500: 640,   // $6.40
-    1000: 1280, // $12.80
-    2000: 2560, // $25.60
-    5000: 6400, // $64.00
-    10000: 12800 // $128.00
-};
 
 async function purchaseCoins(req, res) {
     const errors = validationResult(req);
@@ -25,14 +15,14 @@ async function purchaseCoins(req, res) {
     const userId = req.user._id;
 
     try {
-        const amountInCents = coinPrices[coinAmount];
-        if (!amountInCents) {
+        const coin = await Coin.findOne({ amount: coinAmount });
+        if (!coin) {
             return res.status(400).json({ message: 'Invalid coin amount' });
         }
 
         // Create a PaymentIntent
         const paymentIntent = await stripe.paymentIntents.create({
-            amount: amountInCents,
+            amount: coin.priceInCents,
             currency: 'usd',
             payment_method_types: ['card'],
             metadata: {
@@ -44,7 +34,7 @@ async function purchaseCoins(req, res) {
         // Send the client secret to the client
         res.status(200).json({
             clientSecret: paymentIntent.client_secret,
-            amountinCents: amountInCents,
+            amountInCents: coin.priceInCents,
             noOfCoins: coinAmount
         });
 
@@ -54,7 +44,6 @@ async function purchaseCoins(req, res) {
     }
 }
 
-// New function to handle successful payments
 async function handleSuccessfulPayment(req, res) {
     const { paymentIntentId } = req.body;
 
@@ -96,5 +85,5 @@ async function getCoinBalance(req, res) {
 module.exports = {
     purchaseCoins,
     handleSuccessfulPayment,
-    getCoinBalance
-}
+    getCoinBalance,
+};

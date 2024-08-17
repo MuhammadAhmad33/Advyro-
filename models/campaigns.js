@@ -65,10 +65,6 @@ const CampaignSchema = new mongoose.Schema({
         required: false,
     },
     analytics: [AnalyticsSchema], // Array of analytics data
-    feePaid: {
-        type: Boolean,
-        default: false
-    }
 });
 
 module.exports = mongoose.model('Campaign', CampaignSchema);

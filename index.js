@@ -6,6 +6,7 @@ const config = require('./config/config');
 const businessRoute = require('./routes/businessRoute')
 const campaignRoute = require('./routes/campaignRoutes')
 const midAdminRoute = require('./routes/midAdminRoutes')
+const superAdminRoute= require('./routes/superAdminRoutes')
 const coinRoute=require('./routes/coinRoute')
 const app = express();
 
@@ -18,6 +19,7 @@ app.use('/business',businessRoute)
 app.use('/campaign',campaignRoute)
 app.use('/midAdmin',midAdminRoute)
 app.use('/coin',coinRoute)
+app.use('/superAdmin',superAdminRoute)
 
 // Error handling middleware
 app.use((err, req, res, next) => {

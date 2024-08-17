@@ -43,7 +43,6 @@ const BusinessSchema = new mongoose.Schema({
         type: String,
         required: false,
     },
-    // New fields
     websiteUrl: {
         type: String,
         required: false,
