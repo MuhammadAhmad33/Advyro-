@@ -1,6 +1,7 @@
 // controllers/coinController.js
 const User = require('../models/users');
 const Coin = require('../models/coin');
+const SubscriptionPlan = require('../models/subscriptionPlans');
 const config = require('../config/config');
 
 // Helper function to check if user is super admin
@@ -77,9 +78,79 @@ async function getAllCoins(req, res) {
     }
 }
 
+async function addSubscriptionPlan(req, res) {
+    if (!isSuperAdmin(req.user)) {
+        return res.status(403).json({ message: 'Access denied. Super admin rights required.' });
+    }
+
+    const { name, price, businessLimit } = req.body;
+
+    try {
+        const newPlan = new SubscriptionPlan({ name, price, businessLimit });
+        await newPlan.save();
+        res.status(201).json({ message: 'Subscription plan added successfully', plan: newPlan });
+    } catch (error) {
+        console.error('Error adding subscription plan:', error);
+        res.status(500).json({ message: 'An error occurred while adding the subscription plan' });
+    }
+}
+
+async function updateSubscriptionPlan(req, res) {
+    if (!isSuperAdmin(req.user)) {
+        return res.status(403).json({ message: 'Access denied. Super admin rights required.' });
+    }
+
+    const { id } = req.params;
+    const { name, price, businessLimit } = req.body;
+
+    try {
+        const updatedPlan = await SubscriptionPlan.findByIdAndUpdate(id, { name, price, businessLimit }, { new: true });
+        if (!updatedPlan) {
+            return res.status(404).json({ message: 'Subscription plan not found' });
+        }
+        res.status(200).json({ message: 'Subscription plan updated successfully', plan: updatedPlan });
+    } catch (error) {
+        console.error('Error updating subscription plan:', error);
+        res.status(500).json({ message: 'An error occurred while updating the subscription plan' });
+    }
+}
+
+async function deleteSubscriptionPlan(req, res) {
+    if (!isSuperAdmin(req.user)) {
+        return res.status(403).json({ message: 'Access denied. Super admin rights required.' });
+    }
+
+    const { id } = req.params;
+
+    try {
+        const deletedPlan = await SubscriptionPlan.findByIdAndDelete(id);
+        if (!deletedPlan) {
+            return res.status(404).json({ message: 'Subscription plan not found' });
+        }
+        res.status(200).json({ message: 'Subscription plan deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting subscription plan:', error);
+        res.status(500).json({ message: 'An error occurred while deleting the subscription plan' });
+    }
+}
+
+async function getAllSubscriptionPlans(req, res) {
+    try {
+        const plans = await SubscriptionPlan.find();
+        res.status(200).json(plans);
+    } catch (error) {
+        console.error('Error fetching subscription plans:', error);
+        res.status(500).json({ message: 'An error occurred while fetching subscription plans' });
+    }
+}
+
 module.exports = {
     addCoin,
     updateCoin,
     deleteCoin,
-    getAllCoins
+    getAllCoins,
+    addSubscriptionPlan,
+    updateSubscriptionPlan,
+    deleteSubscriptionPlan,
+    getAllSubscriptionPlans
 };

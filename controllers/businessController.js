@@ -1,6 +1,7 @@
 const { BlobServiceClient } = require('@azure/storage-blob');
 const User = require('../models/users');
 const Business = require('../models/business');
+const SubscriptionPlan = require('../models/subscriptionPlans');
 const multer = require('multer');
 const path = require('path');
 const config=require('../config/config')
@@ -111,12 +112,6 @@ async function getUserBusinesses(req, res) {
     }
 };
 
-// Prices for the subscription plans in the smallest currency unit (cents for USD)
-const prices = {
-    basic: 1000,   // $10
-    standard: 2500, // $25
-    pro: 5000,     // $50
-};
 
 const selectSubscriptionPlan = async (req, res) => {
     try {
@@ -132,9 +127,12 @@ const selectSubscriptionPlan = async (req, res) => {
             return res.status(400).json({ error: 'User ID is required' });
         }
 
-        if (!prices[plan]) {
+        const subscriptionPlan = await SubscriptionPlan.findOne({ name: plan });
+
+        if (!subscriptionPlan) {
             return res.status(400).json({ error: 'Invalid subscription plan' });
         }
+        console.log(subscriptionPlan)
 
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
@@ -142,22 +140,22 @@ const selectSubscriptionPlan = async (req, res) => {
                 price_data: {
                     currency: 'usd',
                     product_data: {
-                        name: `${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan`,
+                        name: `${subscriptionPlan.name} Plan`,
                     },
-                    unit_amount: prices[plan],
+                    unit_amount: subscriptionPlan.price, // Convert to cents
                 },
                 quantity: 1,
             }],
             mode: 'payment',
             success_url: `http://localhost:7002/payment-success?session_id={CHECKOUT_SESSION_ID}&plan=${plan}`,
             cancel_url: `http://localhost:7002/payment-cancel`,
-            client_reference_id: userId.toString(), // Add user ID as a reference
+            client_reference_id: userId.toString(),
         });
 
         console.log('Checkout Session created:', session.id);
         res.status(200).json({ 
             sessionId: session.id,
-            checkoutUrl:session.url
+            checkoutUrl: session.url
         });
     } catch (error) {
         console.error('Error in selectSubscriptionPlan:', error);
