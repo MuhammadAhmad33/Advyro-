@@ -89,7 +89,7 @@ async function createCampaign(req, res) {
 
 
 async function payCampaignFee(req, res) {
-    
+
     const userId = req.user._id;
     console.log(req.body)
 
@@ -222,6 +222,26 @@ async function getAllDesigns(req, res) {
         res.status(500).json({ message: error.message });
     }
 }
+async function deleteAllCampaigns(req, res) {
+    const userId = req.user._id; // Ensure `req.user` has the `_id` property
+
+    try {
+        // Check if the user is authorized to delete campaigns
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Delete all campaigns
+        const result = await Campaign.deleteMany({}); // This will delete all campaigns
+
+        res.status(200).json({
+            message: `${result.deletedCount} campaigns deleted successfully.`,
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+}
 
 module.exports = {
     createCampaign: [upload, createCampaign],
@@ -230,5 +250,6 @@ module.exports = {
     payCampaignFee,
     cancelCampaign,
     getCampaignsByStatus,
-    getAllDesigns
+    getAllDesigns,
+    deleteAllCampaigns
 };

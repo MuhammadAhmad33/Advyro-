@@ -121,14 +121,14 @@ async function resetPassword(req, res) {
         return res.status(400).json({ errors: errors.array() });
     }
 
-    const { id } = req.params;
+    const userId = req.user._id;
     const { newPassword, confirmPassword } = req.body;
 
     try {
         if (newPassword !== confirmPassword) {
             return res.status(400).json({ message: 'Passwords do not match' });
         }
-        const user = await User.findById(id);
+        const user = await User.findById(userId);
 
         if (!user) {
             return res.status(400).json({ message: 'Password reset token is invalid or has expired' });

@@ -20,5 +20,6 @@ router.get('/campaignsByStatus', auth, campaignController.getCampaignsByStatus);
 // Route to get all campaigns for a specific business
 router.get('/business/:businessId',auth,campaignController.getCampaigns);
 
+router.delete('/delAllCamp',auth,campaignController.deleteAllCampaigns)
 
 module.exports = router;
