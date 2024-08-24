@@ -35,16 +35,21 @@ router.post('/reset-password', [
 ], authController.resetPassword);
 
 router.post('/verify-otp', [
-    check('email').isEmail().withMessage('Must be a valid email'),
-    check('otp').isLength({ min: 4, max: 4 }).withMessage('OTP must be 4 digits')
-  ], (req, res) => {
-    const { email, otp } = req.body;
-  
-    if (verifyOTP(email, otp)) {
-      return res.status(200).json({ message: 'OTP verified successfully' });
-    } else {
-      return res.status(400).json({ message: 'Invalid or expired OTP' });
-    }
-  });
+  check('email').isEmail().withMessage('Must be a valid email'),
+  check('otp').isLength({ min: 4, max: 4 }).withMessage('OTP must be 4 digits')
+], async (req, res) => {
+  const { email, otp } = req.body;
+
+  const token = await verifyOTP(email, otp); // Call verifyOTP and wait for the result
+
+  if (token) {
+    return res.status(200).json({
+      message: 'OTP verified successfully',
+      token // Include the token in the response
+    });
+  } else {
+    return res.status(400).json({ message: 'Invalid or expired OTP' });
+  }
+});
 
 module.exports = router;

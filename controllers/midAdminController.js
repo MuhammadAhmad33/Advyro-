@@ -249,6 +249,19 @@ async function addAnalyticsData(req, res) {
         res.status(500).json({ message: error.message });
     }
 }
+// Controller function to get the 10 most recent businesses
+async function getRecentBusinesses(req, res){
+    try {
+      const recentBusinesses = await Business.find()
+        .sort({ createdAt: -1 }) // Sort by createdAt field in descending order
+        .limit(10); // Limit the results to 10
+  
+      return res.status(200).json(recentBusinesses);
+    } catch (error) {
+      console.error('Error fetching recent businesses:', error);
+      return res.status(500).json({ message: 'Error fetching recent businesses', error: error.message });
+    }
+  };
 
 module.exports = {
     changeBusinessStatus,
@@ -259,5 +272,6 @@ module.exports = {
     getBusinessesByStatus,
     getCampaignsByStatus,
     addAnalyticsData,
+    getRecentBusinesses,
     uploadDesign:[upload,uploadDesign]
 };

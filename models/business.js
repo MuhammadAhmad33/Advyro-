@@ -62,7 +62,11 @@ const BusinessSchema = new mongoose.Schema({
     tiktokUrl: {
         type: String,
         required: false,
-    }
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now, // Automatically set the current date when a document is created
+    },
 });
 
 module.exports = mongoose.model('Business', BusinessSchema);

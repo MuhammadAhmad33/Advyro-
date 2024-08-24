@@ -31,6 +31,9 @@ router.patch('/design-requests/:requestId', midAdminController.updateDesignReque
 // Route to get businesses based on status
 router.get('/businesses/:status', midAdminController.getBusinessesByStatus);
 
+// Route to get the 10 most recent businesses
+router.get('/recent-businesses',  midAdminController.getRecentBusinesses);
+
 // Route to get campaigns based on status
 router.get('/campaigns/:status', midAdminController.getCampaignsByStatus);
 router.post('/upload-design', auth, midAdminController.uploadDesign);

@@ -91,29 +91,29 @@ async function loginUser(req, res) {
 async function forgotPassword(req, res) {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+      return res.status(400).json({ errors: errors.array() });
     }
-
+  
     const { email } = req.body;
-
+  
     try {
-        const user = await User.findOne({ email });
-
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        } else {
-            const otp = generateOTP();
-            console.log(otp);
-            storeOTP(email, otp);
-            await sendOTPEmail(email, otp);
-            console.log(user);
-            return res.status(500).json({ message: 'OTP sent to email'});
-        }
+      const user = await User.findOne({ email });
+  
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      } else {
+        const otp = generateOTP();
+        console.log(otp);
+        storeOTP(email, otp);
+        await sendOTPEmail(email, otp);
+        console.log(user);
+        return res.status(200).json({ message: 'OTP sent to email' }); // Change status code to 200
+      }
     } catch (error) {
-        console.error('Error resetting password:', error);
-        res.status(500).json({ message: 'Email does not exist kindly provide a valid email' });
+      console.error('Error resetting password:', error);
+      return res.status(500).json({ message: 'Internal server error' }); // Return a generic error message
     }
-}
+  }
 
 async function resetPassword(req, res) {
     const errors = validationResult(req);
