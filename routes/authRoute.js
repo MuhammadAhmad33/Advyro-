@@ -19,6 +19,20 @@ router.post('/register', [
     check('role').optional().isIn(['customer', 'mid admin', 'super admin']).withMessage('Invalid role')
 ], authController.registerUser);
 
+// MidAdmin registration route
+router.post('/midAdmin-signup', [
+  check('fullname').not().isEmpty().withMessage('Full name is required'),
+  check('email').isEmail().withMessage('Valid email is required'),
+  check('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long'),
+  check('confirmPassword').custom((value, { req }) => {
+      if (value !== req.body.password) {
+          throw new Error('Password confirmation does not match password');
+      }
+      return true;
+  }).withMessage('Passwords do not match'),
+  check('role').optional().isIn(['mid admin']).withMessage('Invalid role')
+], authController.midAdminSignup);
+
 
 router.post('/login', [
     check('email').isEmail().withMessage('Valid email is required'),

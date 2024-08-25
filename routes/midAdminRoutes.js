@@ -37,6 +37,7 @@ router.get('/recent-businesses',  midAdminController.getRecentBusinesses);
 // Route to get campaigns based on status
 router.get('/campaigns/:status', midAdminController.getCampaignsByStatus);
 router.post('/upload-design', auth, midAdminController.uploadDesign);
+router.post('/requestManagement',auth,midAdminController.requestBusinessManagement);
 router.post('/campaigns/:campaignId/analytics', midAdminController.addAnalyticsData);
 
 

@@ -2,6 +2,7 @@ const { BlobServiceClient } = require('@azure/storage-blob');
 const User = require('../models/users');
 const Business = require('../models/business');
 const Campaign = require('../models/campaigns');
+const ManagementRequest = require('../models/managementReq'); 
 const CustomDesignRequest = require('../models/designRequest');
 const multer = require('multer');
 const path = require('path');
@@ -261,7 +262,37 @@ async function getRecentBusinesses(req, res){
       console.error('Error fetching recent businesses:', error);
       return res.status(500).json({ message: 'Error fetching recent businesses', error: error.message });
     }
-  };
+};
+
+async function requestBusinessManagement(req, res) {
+    const { businessId } = req.body; // Expecting business ID in the request body
+    const midAdminId = req.user._id; // Assuming req.user contains the authenticated user's data
+
+    try {
+        // Check if the user is a mid admin
+        const user = await User.findById(midAdminId);
+        if (!user || user.role !== 'mid admin') {
+            return res.status(403).json({ message: 'Forbidden: Only mid admins can request business management' });
+        }
+
+        // Check if the business exists
+        const business = await Business.findById(businessId);
+        if (!business) {
+            return res.status(404).json({ message: 'Business not found' });
+        }
+
+        // Create a new management request
+        const request = new ManagementRequest({
+            midAdmin: midAdminId,
+            business: businessId,
+        });
+
+        await request.save();
+        return res.status(201).json({ message: 'Management request submitted successfully', request });
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+};
 
 module.exports = {
     changeBusinessStatus,
@@ -273,5 +304,6 @@ module.exports = {
     getCampaignsByStatus,
     addAnalyticsData,
     getRecentBusinesses,
+    requestBusinessManagement,
     uploadDesign:[upload,uploadDesign]
 };

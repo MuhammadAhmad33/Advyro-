@@ -1,8 +1,9 @@
 const User = require('../models/users');
+const AdminCode = require('../models/adminCode')
 const { generateToken } = require('../utils/jwt');
 const bcrypt = require('bcryptjs');
 const { validationResult } = require('express-validator');
-const {sendEmail,sendOTPEmail} = require('../utils/sendEmail');
+const { sendEmail, sendOTPEmail } = require('../utils/sendEmail');
 const generateOTP = require('../utils/otpGenerator');
 const { storeOTP, verifyOTP } = require('../utils/otpVerifier');
 
@@ -14,11 +15,11 @@ async function registerUser(req, res) {
     }
 
     const { fullname, email, phoneNumber, password, confirmPassword, role } = req.body;
-   
+
     const otp = generateOTP();
-            console.log(otp);
-            storeOTP(email, otp);
-            
+    console.log(otp);
+    storeOTP(email, otp);
+
     const subject = 'Registration Confirmation';
     const confirmationMessage = `
     Hi ${fullname}!
@@ -91,29 +92,29 @@ async function loginUser(req, res) {
 async function forgotPassword(req, res) {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+        return res.status(400).json({ errors: errors.array() });
     }
-  
+
     const { email } = req.body;
-  
+
     try {
-      const user = await User.findOne({ email });
-  
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-      } else {
-        const otp = generateOTP();
-        console.log(otp);
-        storeOTP(email, otp);
-        await sendOTPEmail(email, otp);
-        console.log(user);
-        return res.status(200).json({ message: 'OTP sent to email' }); // Change status code to 200
-      }
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        } else {
+            const otp = generateOTP();
+            console.log(otp);
+            storeOTP(email, otp);
+            await sendOTPEmail(email, otp);
+            console.log(user);
+            return res.status(200).json({ message: 'OTP sent to email' }); // Change status code to 200
+        }
     } catch (error) {
-      console.error('Error resetting password:', error);
-      return res.status(500).json({ message: 'Internal server error' }); // Return a generic error message
+        console.error('Error resetting password:', error);
+        return res.status(500).json({ message: 'Internal server error' }); // Return a generic error message
     }
-  }
+}
 
 async function resetPassword(req, res) {
     const errors = validationResult(req);
@@ -145,10 +146,45 @@ async function resetPassword(req, res) {
         res.status(500).json({ message: error.message });
     }
 }
+// Endpoint for mid admin signup
+async function midAdminSignup(req, res) {
+    const { fullname, email, phoneNumber, password, confirmPassword, adminCode } = req.body;
+
+    try {
+
+        // Log the received admin code for debugging
+        console.log('Received admin code:', adminCode);
+
+        // Check if the provided admin code exists in the database
+        const code = await AdminCode.find({code:adminCode});
+
+        // If the code is not found, return an error
+        if (!code) {
+            return res.status(400).json({ message: 'Invalid admin code' });
+        }
+
+        // Create the mid admin user
+        const midAdmin = new User({
+            fullname,
+            email,
+            phoneNumber,
+            password,
+            confirmPassword,
+            role: 'mid admin',
+        });
+
+        await midAdmin.save();
+
+        return res.status(201).json({ message: 'Mid admin created successfully', midAdmin });
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+};
 
 module.exports = {
     registerUser,
     loginUser,
     forgotPassword,
-    resetPassword
+    resetPassword,
+    midAdminSignup
 };

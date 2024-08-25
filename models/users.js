@@ -46,6 +46,26 @@ const UserSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    permissions: {
+        campaigns: {
+            manage: {
+                type: Boolean,
+                default: false,
+            },
+        },
+        businesses: {
+            manage: {
+                type: Boolean,
+                default: false,
+            },
+        },
+        adBannerDesigns: {
+            manage: {
+                type: Boolean,
+                default: false,
+            },
+        },
+    },
 });
 
 module.exports = mongoose.model('User', UserSchema);
