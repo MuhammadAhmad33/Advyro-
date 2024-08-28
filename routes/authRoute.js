@@ -65,5 +65,5 @@ router.post('/verify-otp', [
     return res.status(400).json({ message: 'Invalid or expired OTP' });
   }
 });
-
+router.post('/send-notification',auth,authController.sendNotification)
 module.exports = router;

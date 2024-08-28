@@ -6,8 +6,7 @@ const { validationResult } = require('express-validator');
 const { sendEmail, sendOTPEmail } = require('../utils/sendEmail');
 const generateOTP = require('../utils/otpGenerator');
 const { storeOTP, verifyOTP } = require('../utils/otpVerifier');
-
-
+const admin = require('../utils/firebase');
 async function registerUser(req, res) {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -65,7 +64,7 @@ async function loginUser(req, res) {
         return res.status(400).json({ errors: errors.array() });
     }
 
-    const { email, password } = req.body;
+    const { email, password, fcmToken } = req.body;
 
     try {
         const user = await User.findOne({ email });
@@ -81,8 +80,10 @@ async function loginUser(req, res) {
         }
 
         const token = generateToken(user._id);
+        user.fcmToken = fcmToken;
+        await user.save();
 
-        res.status(200).json({ message: 'Login successful', user, token });
+        res.status(200).json({ message: 'Login successful', user, token, fcmToken });
     } catch (error) {
         console.error('Error logging in:', error);
         res.status(500).json({ message: 'Error logging in' });
@@ -180,11 +181,41 @@ async function midAdminSignup(req, res) {
         return res.status(500).json({ message: error.message });
     }
 };
-
+// Route to send notification
+async function sendNotification (req, res){
+    const {  title, body } = req.body;
+  
+    try {
+      // Find the user by ID and get their FCM token
+      const user = await userModel.findById(req.user._id);
+      if (!user || !user.fcmToken) {
+        return res.status(404).json({ message: 'User not found or FCM token not available' });
+      }
+  
+      const message = {
+        notification: {
+          title: title,
+          body: body,
+        },
+        token: user.fcmToken,
+      };
+  
+      // Send the notification using Firebase Admin SDK
+      const response = await admin.messaging().send(message);
+      console.log('Successfully sent message:', response);
+  
+      res.status(200).json({ message: 'Notification sent successfully' });
+    } catch (error) {
+      console.error('Error sending notification:', error);
+      res.status(500).json({ message: 'Error sending notification', error: error.message });
+    }
+  };
+  
 module.exports = {
     registerUser,
     loginUser,
     forgotPassword,
     resetPassword,
-    midAdminSignup
+    midAdminSignup,
+    sendNotification
 };
