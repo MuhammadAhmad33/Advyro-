@@ -187,7 +187,7 @@ async function sendNotification (req, res){
   
     try {
       // Find the user by ID and get their FCM token
-      const user = await userModel.findById(req.user._id);
+      const user = await User.findById(req.user._id);
       if (!user || !user.fcmToken) {
         return res.status(404).json({ message: 'User not found or FCM token not available' });
       }
