@@ -182,34 +182,37 @@ async function midAdminSignup(req, res) {
     }
 };
 // Route to send notification
-async function sendNotification (req, res){
-    const {  title, body } = req.body;
-  
+async function sendNotification(req, res) {
+    const { title, body } = req.body;
+
     try {
-      // Find the user by ID and get their FCM token
-      const user = await User.findById(req.user._id);
-      if (!user || !user.fcmToken) {
-        return res.status(404).json({ message: 'User not found or FCM token not available' });
-      }
-  
-      const message = {
-        notification: {
-          title: title,
-          body: body,
-        },
-        token: user.fcmToken,
-      };
-  
-      // Send the notification using Firebase Admin SDK
-      const response = await admin.messaging().send(message);
-      console.log('Successfully sent message:', response);
-  
-      res.status(200).json({ message: 'Notification sent successfully' });
+        // Find the user by ID and get their FCM token
+        const user = await User.findById(req.user._id);
+        if (!user || !user.fcmToken) {
+            return res.status(404).json({ message: 'User not found or FCM token not available' });
+        }
+
+        // Check if body is an array and convert it to a string
+        const bodyMessage = Array.isArray(body) ? body.join('\n') : body;
+
+        const message = {
+            notification: {
+                title: title,
+                body: bodyMessage,
+            },
+            token: user.fcmToken,
+        };
+
+        // Send the notification using Firebase Admin SDK
+        const response = await admin.messaging().send(message);
+        console.log('Successfully sent message:', response);
+
+        res.status(200).json({ message: 'Notification sent successfully' });
     } catch (error) {
-      console.error('Error sending notification:', error);
-      res.status(500).json({ message: 'Error sending notification', error: error.message });
+        console.error('Error sending notification:', error);
+        res.status(500).json({ message: 'Error sending notification', error: error.message });
     }
-  };
+}
   
 module.exports = {
     registerUser,
