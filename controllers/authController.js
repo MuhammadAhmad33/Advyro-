@@ -192,16 +192,19 @@ async function sendNotification(req, res) {
             return res.status(404).json({ message: 'User not found or FCM token not available' });
         }
 
-        // Check if body is an array and convert it to a string
-        const bodyMessage = Array.isArray(body) ? body.join('\n') : body;
+        // Ensure body is an object
+        if (typeof body !== 'object' || Array.isArray(body)) {
+            return res.status(400).json({ message: 'Body must be a valid object' });
+        }
 
         const message = {
             notification: {
                 title: title,
-                body: bodyMessage,
+                body: JSON.stringify(body), // Convert the object to a string if needed
             },
             token: user.fcmToken,
         };
+        console.log('Sending message:', message);
 
         // Send the notification using Firebase Admin SDK
         const response = await admin.messaging().send(message);
