@@ -183,18 +183,17 @@ async function midAdminSignup(req, res) {
 };
 // Route to send notification
 async function sendNotification(req, res) {
-    const { title, body } = req.body;
+    const { title, body, fcmToken } = req.body;
 
     try {
-        // Find the user by ID and get their FCM token
-        const user = await User.findById(req.user._id);
-        if (!user || !user.fcmToken) {
-            return res.status(404).json({ message: 'User not found or FCM token not available' });
-        }
-
         // Ensure body is an object
         if (typeof body !== 'object' || Array.isArray(body)) {
             return res.status(400).json({ message: 'Body must be a valid object' });
+        }
+
+        // Ensure fcmToken is provided
+        if (!fcmToken) {
+            return res.status(400).json({ message: 'FCM token is required' });
         }
 
         const message = {
@@ -202,7 +201,7 @@ async function sendNotification(req, res) {
                 title: title,
                 body: JSON.stringify(body), // Convert the object to a string if needed
             },
-            token: user.fcmToken,
+            token: fcmToken,
         };
         console.log('Sending message:', message);
 
@@ -216,6 +215,26 @@ async function sendNotification(req, res) {
         res.status(500).json({ message: 'Error sending notification', error: error.message });
     }
 }
+
+// Function to get FCM token of a user
+const getFcmToken = async (req, res) => {
+    try {
+        const userId = req.params.id; // Assuming you're using middleware to set req.user
+
+        // Find the user by ID
+        const user = await User.findById(userId).select('fcmToken'); // Only select the fcmToken field
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Return the FCM token
+        res.status(200).json({ fcmToken: user.fcmToken });
+    } catch (error) {
+        console.error('Error retrieving FCM token:', error);
+        res.status(500).json({ message: 'Error retrieving FCM token', error: error.message });
+    }
+};
   
 module.exports = {
     registerUser,
@@ -223,5 +242,6 @@ module.exports = {
     forgotPassword,
     resetPassword,
     midAdminSignup,
-    sendNotification
+    sendNotification,
+    getFcmToken
 };

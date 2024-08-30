@@ -65,5 +65,7 @@ router.post('/verify-otp', [
     return res.status(400).json({ message: 'Invalid or expired OTP' });
   }
 });
-router.post('/send-notification',auth,authController.sendNotification)
+router.post('/send-notification',auth,authController.sendNotification),
+router.get('/:id/fcm-token', authController.getFcmToken); 
+
 module.exports = router;
