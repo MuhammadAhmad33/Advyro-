@@ -66,6 +66,17 @@ router.post('/verify-otp', [
   }
 });
 router.post('/send-notification',auth,authController.sendNotification),
+
+// Route to upload profile picture
+router.post('/profile-pic', auth, authController.uploadProfilePic);
+
+// Route to get user by ID
+router.get('/:id', authController.getUserById);
+
+// Route to edit user profile
+router.put('/editUser/:id', authController.editProfile);
+
+
 router.get('/:id/fcm-token', authController.getFcmToken); 
 
 module.exports = router;

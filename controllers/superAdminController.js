@@ -4,6 +4,7 @@ const Coin = require('../models/coin');
 const ManagementRequest = require('../models/managementReq'); 
 const SubscriptionPlan = require('../models/subscriptionPlans');
 const AdminCode= require('../models/adminCode')
+const Business= require('../models/business');
 const config = require('../config/config');
 
 // Helper function to check if user is super admin
@@ -22,11 +23,15 @@ async function addCoin(req, res) {
 
     try {
         const newCoin = new Coin({ amount, priceInCents });
+        if (await Coin.findOne({ amount })) {
+            return res.status(400).json({ message: 'Coin already exists' });
+
+        }
         await newCoin.save();
         res.status(201).json({ message: 'Coin added successfully', coin: newCoin });
     } catch (error) {
         console.error('Error adding coin:', error);
-        res.status(500).json({ message: 'An error occurred while adding the coin' });
+        res.status(500).json({ message: error.message });
     }
 }
 
@@ -196,6 +201,7 @@ async function getAllMidAdmins(req, res) {
 
         // Generate a 6-digit random code
         const signupCode = Math.floor(100000 + Math.random() * 900000).toString();
+        console.log(typeof signupCode);
 
         const adminCode = new AdminCode({
             code:signupCode,
@@ -254,6 +260,76 @@ async function getSubscriptionCounts(req, res) {
         console.error('Error fetching subscription counts:', error);
         return res.status(500).json({ message: 'Error fetching subscription counts', error: error.message });
     }
+};
+
+// Endpoint to approve or reject management requests
+async function handleManagementRequest(req, res) {
+    const { requestId, action } = req.body; // action should be 'approve' or 'reject'
+
+    try {
+        // Find the management request by ID
+        const request = await ManagementRequest.findById(requestId)
+            .populate('business'); // Populate business details
+
+        if (!request) {
+            return res.status(404).json({ message: 'Management request not found' });
+        }
+
+        // Handle the action (approve or reject)
+        if (action === 'approve') {
+            // Update the request status to approved
+            request.status = 'approved';
+            await request.save();
+
+            // Update the corresponding business to set the managedBy field to the mid admin
+            const updatedBusiness = await Business.findByIdAndUpdate(
+                request.business,
+                {
+                    managedBy: request.midAdmin, // Set the managedBy field to the mid admin
+                },
+                { new: true } // Return the updated document
+            ).populate('managedBy'); // Populate the managedBy field to get user details
+
+            return res.status(200).json({
+                message: 'Management request approved',
+                request,
+                business: updatedBusiness // Include the updated business in the response
+            });
+        } else if (action === 'reject') {
+            // Update the request status to denied
+            request.status = 'denied';
+            await request.save();
+
+            return res.status(200).json({ message: 'Management request denied', request });
+        } else {
+            return res.status(400).json({ message: 'Invalid action. Use "approve" or "reject".' });
+        }
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+};
+
+// Function to delete a mid admin
+async function deleteMidAdmin(req, res) {
+    const userId = req.params.id; // Assuming the user ID is passed in the URL
+
+    try {
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Check if the user is a mid admin
+        if (user.role !== 'mid admin') {
+            return res.status(400).json({ message: 'User is not a mid admin' });
+        }
+
+        // Delete the mid admin
+        await User.findByIdAndDelete(userId);
+        return res.status(200).json({ message: 'Mid admin deleted successfully' });
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
 }
 
 module.exports = {
@@ -270,5 +346,7 @@ module.exports = {
     generateCode,
     getAllMidAdmins,
     updateMidAdminPermissions,
-    getSubscriptionCounts
+    getSubscriptionCounts,
+    handleManagementRequest,
+    deleteMidAdmin,
 };

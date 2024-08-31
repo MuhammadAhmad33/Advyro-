@@ -34,6 +34,11 @@ const BusinessSchema = new mongoose.Schema({
         ref: 'User',
         required: true,
     },
+    managedBy: { // New field to indicate which mid admin is managing the business
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: false,
+    },
     status: {
         type: String,
         enum: ['pending', 'accepted', 'rejected'],

@@ -7,6 +7,29 @@ const { sendEmail, sendOTPEmail } = require('../utils/sendEmail');
 const generateOTP = require('../utils/otpGenerator');
 const { storeOTP, verifyOTP } = require('../utils/otpVerifier');
 const admin = require('../utils/firebase');
+const config = require('../config/config');
+const { BlobServiceClient } = require('@azure/storage-blob');
+const multer = require('multer');
+const path = require('path');
+
+
+// Azure Blob Storage setup
+const blobServiceClient = BlobServiceClient.fromConnectionString(config.AZURE_STORAGE_CONNECTION_STRING);
+const containerClient = blobServiceClient.getContainerClient(config.AZURE_CONTAINER_NAME);
+
+// Set up Multer for file uploads
+const storage = multer.memoryStorage(); // or diskStorage depending on your setup
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // Limit file size (e.g., 5MB)
+}).single('profilePic'); // Handle a single file, field name is 'profilePic'
+
+async function uploadToAzureBlob(fileBuffer, fileName) {
+    const blockBlobClient = containerClient.getBlockBlobClient(fileName);
+    await blockBlobClient.uploadData(fileBuffer);
+    return blockBlobClient.url;
+}
+
 async function registerUser(req, res) {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -147,17 +170,16 @@ async function resetPassword(req, res) {
         res.status(500).json({ message: error.message });
     }
 }
-// Endpoint for mid admin signup
 async function midAdminSignup(req, res) {
-    const { fullname, email, phoneNumber, password, confirmPassword, adminCode } = req.body;
+    const { fullname, email, phoneNumber, password, confirmPassword, Code } = req.body;
 
     try {
-
         // Log the received admin code for debugging
-        console.log('Received admin code:', adminCode);
+        console.log('Received admin code:', typeof(Code));
 
         // Check if the provided admin code exists in the database
-        const code = await AdminCode.find({code:adminCode});
+        const code = await AdminCode.findOne({ code: Code}); // Use findOne to check for a single document
+        console.log('Retrieved code from DB:', code); // Log the retrieved code
 
         // If the code is not found, return an error
         if (!code) {
@@ -235,6 +257,68 @@ const getFcmToken = async (req, res) => {
         res.status(500).json({ message: 'Error retrieving FCM token', error: error.message });
     }
 };
+
+// Function to get user by ID
+async function getUserById(req, res) {
+    const userId = req.params.id;
+
+    try {
+        const user = await User.findById(userId).select('-password'); // Exclude password from response
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        return res.status(200).json(user);
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+}
+
+// Function to edit user profile
+async function editProfile(req, res) {
+    const userId = req.params.id; // Assuming the user ID is passed in the URL
+    const { fullname, email, phoneNumber, subscription } = req.body;
+
+    try {
+        // Find the user by ID and update the fields
+        const user = await User.findByIdAndUpdate(userId, {
+            fullname,
+            email,
+            phoneNumber,
+            subscription
+        }, { new: true, runValidators: true }).select('-password'); // Exclude password from response
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        return res.status(200).json({ message: 'Profile updated successfully', user });
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+}
+
+async function uploadProfilePic(req, res) {
+    const userId = req.user._id; // Ensure `req.user` has the `_id` property
+
+    try {
+        // Check if a file is uploaded
+        if (!req.file) {
+            return res.status(400).json({ message: 'No file uploaded' });
+        }
+
+        // Upload the profile picture to Azure Blob Storage
+        const profilePicUrl = await uploadToAzureBlob(req.file.buffer, Date.now() + path.extname(req.file.originalname));
+
+        // Update the user's profile picture URL
+        await User.findByIdAndUpdate(userId, { profilePic: profilePicUrl });
+
+        res.status(200).json({ message: 'Profile picture uploaded successfully', profilePicUrl });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+}
+
+
   
 module.exports = {
     registerUser,
@@ -243,5 +327,8 @@ module.exports = {
     resetPassword,
     midAdminSignup,
     sendNotification,
-    getFcmToken
+    getFcmToken,
+    getUserById,
+    editProfile,
+    uploadProfilePic:[upload,uploadProfilePic],
 };
