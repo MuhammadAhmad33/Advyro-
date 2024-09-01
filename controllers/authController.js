@@ -203,7 +203,6 @@ async function midAdminSignup(req, res) {
         return res.status(500).json({ message: error.message });
     }
 };
-// Route to send notification
 async function sendNotification(req, res) {
     const { title, body, fcmToken } = req.body;
 
@@ -221,7 +220,10 @@ async function sendNotification(req, res) {
         const message = {
             notification: {
                 title: title,
-                body: JSON.stringify(body), // Convert the object to a string if needed
+                body: body.message, // Use the message field for the notification body
+            },
+            data: {
+                details: JSON.stringify(body.details), // Include structured data in the data payload
             },
             token: fcmToken,
         };
@@ -237,6 +239,7 @@ async function sendNotification(req, res) {
         res.status(500).json({ message: 'Error sending notification', error: error.message });
     }
 }
+
 
 // Function to get FCM token of a user
 const getFcmToken = async (req, res) => {
