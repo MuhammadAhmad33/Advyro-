@@ -175,11 +175,11 @@ async function midAdminSignup(req, res) {
 
     try {
         // Log the received admin code for debugging
-        console.log('Received admin code:', typeof(Code));
+        console.log('Received admin code:', Code.trim());
 
         // Check if the provided admin code exists in the database
-        const code = await AdminCode.findOne({ code: Code}); // Use findOne to check for a single document
-        console.log('Retrieved code from DB:', code); // Log the retrieved code
+        const code = await AdminCode.findOne({ code: Code.trim() }); // Use findOne to check for a single document
+        console.log('Retrieved code from DB:', code);
 
         // If the code is not found, return an error
         if (!code) {

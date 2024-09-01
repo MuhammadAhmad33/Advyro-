@@ -195,24 +195,29 @@ async function getAllMidAdmins(req, res) {
     }
 };
 // Endpoint to generate a 6-digit signup code for mid admins
- async function generateCode (req, res){
+async function generateCode(req, res) {
     try {
         const superAdminId = req.user._id; // Assuming req.user contains the authenticated super admin's data
 
         // Generate a 6-digit random code
         const signupCode = Math.floor(100000 + Math.random() * 900000).toString();
-        console.log(typeof signupCode);
+        console.log('Generated signup code:', signupCode);
 
         const adminCode = new AdminCode({
-            code:signupCode,
+            code: signupCode,
             createdBy: superAdminId,
         });
 
-       return res.status(200).json({ message: 'Signup code generated', adminCode});
+        // Save the code to the database
+        await adminCode.save();
+        console.log('Code saved to DB:', adminCode);
+
+        return res.status(200).json({ message: 'Signup code generated', adminCode });
     } catch (error) {
+        console.error('Error generating code:', error);
         return res.status(500).json({ message: error.message });
     }
-};
+}
 
 async function updateMidAdminPermissions(req, res) {
     const { id } = req.params;
