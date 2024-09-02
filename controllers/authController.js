@@ -174,6 +174,19 @@ async function midAdminSignup(req, res) {
     const { fullname, email, phoneNumber, password, confirmPassword, Code } = req.body;
 
     try {
+
+        const otp = generateOTP();
+        console.log(otp);
+        storeOTP(email, otp);
+
+        const subject = 'Registration Confirmation';
+        const confirmationMessage = `
+        Hi ${fullname}!
+        Thank you for signing up for our platform!
+        \nYour OTP code is: ${otp}
+        \nBest regards,\nAdvyro`;
+    
+
         // Log the received admin code for debugging
         console.log('Received admin code:', Code);
 
@@ -195,7 +208,8 @@ async function midAdminSignup(req, res) {
             confirmPassword,
             role: 'mid admin',
         });
-
+        
+        await sendEmail(email, subject, confirmationMessage);
         await midAdmin.save();
 
         return res.status(201).json({ message: 'Mid admin created successfully', midAdmin });
