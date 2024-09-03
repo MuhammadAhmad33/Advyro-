@@ -185,7 +185,12 @@ async function midAdminSignup(req, res) {
         Thank you for signing up for our platform!
         \nYour OTP code is: ${otp}
         \nBest regards,\nAdvyro`;
-    
+
+        if (password !== confirmPassword) {
+            return res.status(400).json({ message: 'Passwords do not match' });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
 
         // Log the received admin code for debugging
         console.log('Received admin code:', Code);
@@ -204,11 +209,11 @@ async function midAdminSignup(req, res) {
             fullname,
             email,
             phoneNumber,
-            password,
-            confirmPassword,
+            password:hashedPassword,
+            confirmPassword:hashedPassword,
             role: 'mid admin',
         });
-        
+
         await sendEmail(email, subject, confirmationMessage);
         await midAdmin.save();
 
