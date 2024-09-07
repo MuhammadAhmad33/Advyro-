@@ -64,6 +64,10 @@ const CampaignSchema = new mongoose.Schema({
         type: String,
         required: false,
     },
+    statusChangedBy: 
+    { 
+        type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false
+    },
     analytics: [AnalyticsSchema], // Array of analytics data
 });
 

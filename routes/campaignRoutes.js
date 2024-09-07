@@ -16,7 +16,11 @@ router.get('/allDesigns',campaignController.getAllDesigns)
 
 router.get('/campaignsByStatus', auth, campaignController.getCampaignsByStatus);
 
+// Route to like a design
+router.post('/:designId/like', auth, campaignController.likeDesign);
 
+// Route to dislike a design
+router.post('/:designId/dislike', auth, campaignController.dislikeDesign);
 // Route to get all campaigns for a specific business
 router.get('/business/:businessId',auth,campaignController.getCampaigns);
 

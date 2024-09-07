@@ -14,6 +14,14 @@ const AdBannerDesignSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
     },
+    likes: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User', // Reference to the users who liked the design
+    }],
+    dislikes: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User', // Reference to the users who disliked the design
+    }],
 });
 
 module.exports = mongoose.model('AdBannerDesign', AdBannerDesignSchema);

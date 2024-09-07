@@ -136,13 +136,23 @@ async function getCampaigns(req, res) {
 }
 
 async function requestMoreDesigns(req, res) {
-    const { description } = req.body;
+    const { description, businessId, campaignId } = req.body;
     const userId = req.user._id;
 
     try {
+        // Validate that the business and campaign exist
+        const business = await Business.findById(businessId);
+        const campaign = await Campaign.findById(campaignId);
+
+        if (!business || !campaign) {
+            return res.status(400).json({ message: 'Invalid business or campaign ID' });
+        }
+
         const newRequest = new CustomDesignRequest({
             user: userId,
             description,
+            business: businessId,
+            campaign: campaignId,
             status: 'pending', // Initial status set to pending
         });
 
@@ -211,17 +221,26 @@ async function getCampaignsByStatus(req, res) {
         res.status(500).json({ message: error.message });
     }
 }
-
 async function getAllDesigns(req, res) {
     try {
         // Retrieve all design records from the database
-        const designs = await AdBannerDesign.find().populate('uploadedBy', 'fullname email'); // Populate user details
+        const designs = await AdBannerDesign.find()
+            .populate('uploadedBy', 'fullname email') // Populate user details
+            .lean();
 
-        res.status(200).json({ designs });
+        // Add like and dislike counts to each design
+        const designsWithCounts = designs.map(design => ({
+            ...design,
+            likeCount: design.likes.length,
+            dislikeCount: design.dislikes.length,
+        }));
+
+        res.status(200).json({ designs: designsWithCounts });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 }
+
 async function deleteAllCampaigns(req, res) {
     const userId = req.user._id; // Ensure `req.user` has the `_id` property
 
@@ -243,6 +262,54 @@ async function deleteAllCampaigns(req, res) {
     }
 }
 
+async function likeDesign(req, res) {
+    const userId = req.user._id;
+    const { designId } = req.params;
+
+    try {
+        const design = await AdBannerDesign.findById(designId);
+        if (!design) {
+            return res.status(404).json({ message: 'Design not found' });
+        }
+
+        // Remove dislike if it exists
+        design.dislikes.pull(userId);
+        // Add user to likes if not already liked
+        if (!design.likes.includes(userId)) {
+            design.likes.push(userId);
+        }
+
+        await design.save();
+        res.status(200).json({ message: 'Design liked', design });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+}
+
+async function dislikeDesign(req, res) {
+    const userId = req.user._id;
+    const { designId } = req.params;
+
+    try {
+        const design = await AdBannerDesign.findById(designId);
+        if (!design) {
+            return res.status(404).json({ message: 'Design not found' });
+        }
+
+        // Remove like if it exists
+        design.likes.pull(userId);
+        // Add user to dislikes if not already disliked
+        if (!design.dislikes.includes(userId)) {
+            design.dislikes.push(userId);
+        }
+
+        await design.save();
+        res.status(200).json({ message: 'Design disliked', design });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+}
+
 module.exports = {
     createCampaign: [upload, createCampaign],
     getCampaigns,
@@ -251,5 +318,8 @@ module.exports = {
     cancelCampaign,
     getCampaignsByStatus,
     getAllDesigns,
-    deleteAllCampaigns
+    deleteAllCampaigns,
+    likeDesign,
+    dislikeDesign
+    
 };

@@ -65,7 +65,6 @@ async function uploadDesign(req, res) {
     }
 }
 
-
 async function changeBusinessStatus(req, res) {
     const { businessId, status, rejectionReason } = req.body;
     const midAdminId = req.user.id;
@@ -86,6 +85,7 @@ async function changeBusinessStatus(req, res) {
         }
 
         business.status = status;
+        business.statusChangedBy = midAdminId; // Set the mid-admin who changed the status
         if (status === 'rejected' && rejectionReason) {
             business.rejectionReason = rejectionReason;
         } else {
@@ -93,11 +93,15 @@ async function changeBusinessStatus(req, res) {
         }
         await business.save();
 
-        res.status(200).json({ message: `Business ${status} successfully` });
+        // Populate the statusChangedBy field with the user's name
+        const updatedBusiness = await Business.findById(businessId);
+
+        res.status(200).json({ message: `Business ${status} successfully`, business: updatedBusiness });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 }
+
 
 async function updateCampaignStatus(req, res) {
     const { campaignId, status, rejectionReason } = req.body;
@@ -119,6 +123,7 @@ async function updateCampaignStatus(req, res) {
         }
 
         campaign.status = status;
+        campaign.statusChangedBy = userId; // Set the mid-admin who changed the status
         if (status === 'rejected' && rejectionReason) {
             campaign.rejectionReason = rejectionReason;
         } else {
@@ -126,21 +131,30 @@ async function updateCampaignStatus(req, res) {
         }
         await campaign.save();
 
-        res.status(200).json({ message: `Campaign ${status} successfully`, campaign });
+        // Populate the statusChangedBy field with the user's name
+        const updatedCampaign = await Campaign.findById(campaignId);
+
+        res.status(200).json({ message: `Campaign ${status} successfully`, campaign: updatedCampaign });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 }
 
+
 // Function to get all design requests
 async function getAllDesignRequests(req, res) {
     try {
-        const requests = await CustomDesignRequest.find().populate('user', 'fullname email');
+        const requests = await CustomDesignRequest.find()
+            .populate('user', 'fullname email') // Populate user details
+            .populate('business') // Populate complete business details
+            .populate('campaign'); // Populate complete campaign details
+
         res.status(200).json(requests);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 }
+
 
 // Function to update the status of a design request
 async function updateDesignRequestStatus(req, res) {

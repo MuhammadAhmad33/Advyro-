@@ -48,6 +48,10 @@ const BusinessSchema = new mongoose.Schema({
         type: String,
         required: false,
     },
+    statusChangedBy: 
+    { 
+        type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false
+    }, 
     websiteUrl: {
         type: String,
         required: false,
