@@ -221,18 +221,23 @@ async function getCampaignsByStatus(req, res) {
         res.status(500).json({ message: error.message });
     }
 }
+
 async function getAllDesigns(req, res) {
     try {
         // Retrieve all design records from the database
         const designs = await AdBannerDesign.find()
-            .populate('uploadedBy', 'fullname email') // Populate user details
+            .populate('uploadedBy', 'fullname email') // Populate the uploader's details
+            .populate('likes', 'fullname email') // Populate user details for likes
+            .populate('dislikes', 'fullname email') // Populate user details for dislikes
             .lean();
 
-        // Add like and dislike counts to each design
+        // Format each design with user details and counts for likes and dislikes
         const designsWithCounts = designs.map(design => ({
             ...design,
-            likeCount: design.likes.length,
-            dislikeCount: design.dislikes.length,
+            likeCount: (design.likes && design.likes.length) || 0,
+            dislikeCount: (design.dislikes && design.dislikes.length) || 0,
+            likedByUsers: design.likes ? design.likes.map(user => ({ fullname: user.fullname, email: user.email })) : [],
+            dislikedByUsers: design.dislikes ? design.dislikes.map(user => ({ fullname: user.fullname, email: user.email })) : [],
         }));
 
         res.status(200).json({ designs: designsWithCounts });

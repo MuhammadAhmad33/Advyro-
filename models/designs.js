@@ -17,10 +17,12 @@ const AdBannerDesignSchema = new mongoose.Schema({
     likes: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User', // Reference to the users who liked the design
+        default: [] // Ensure an empty array by default
     }],
     dislikes: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User', // Reference to the users who disliked the design
+        default: [] // Ensure an empty array by default
     }],
 });
 

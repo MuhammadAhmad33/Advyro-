@@ -259,7 +259,6 @@ async function sendNotification(req, res) {
     }
 }
 
-
 // Function to get FCM token of a user
 const getFcmToken = async (req, res) => {
     try {
