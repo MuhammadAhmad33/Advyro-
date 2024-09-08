@@ -13,7 +13,13 @@ const AnalyticsSchema = new mongoose.Schema({
         type: Number,
         required: true,
     },
+    addedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
+    },
 });
+
 
 const CampaignSchema = new mongoose.Schema({
     adBanner: {

@@ -38,7 +38,7 @@ router.get('/recent-businesses',  midAdminController.getRecentBusinesses);
 router.get('/campaigns/:status', midAdminController.getCampaignsByStatus);
 router.post('/upload-design', auth, midAdminController.uploadDesign);
 router.post('/requestManagement',auth,midAdminController.requestBusinessManagement);
-router.post('/campaigns/:campaignId/analytics', midAdminController.addAnalyticsData);
+router.post('/campaigns/:campaignId/analytics', auth, midAdminController.addAnalyticsData);
 
 
 module.exports = router;

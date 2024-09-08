@@ -221,16 +221,20 @@ async function getBusinessesByStatus(req, res) {
     }
 }
 
-// Function to get campaigns based on status
 async function getCampaignsByStatus(req, res) {
     const { status } = req.params; // 'pending', 'approved', 'rejected'
 
     try {
-        // Fetch campaigns based on status and populate business details
-        const campaigns = await Campaign.find({ status }).populate({
-            path: 'business',
-            select: 'name location', // Select specific fields from business
-        });
+        // Fetch campaigns based on status and populate business and user details from the business reference
+        const campaigns = await Campaign.find({ status })
+            .populate({
+                path: 'business',
+                select: 'name location owner', // Select specific fields from business, including the owner
+                populate: {
+                    path: 'owner', // Populate the user (owner) from the business
+                    select: 'fullname email', // Select specific fields from user
+                },
+            });
 
         // Return campaigns filtered by status
         res.status(200).json({ campaigns });
@@ -239,10 +243,12 @@ async function getCampaignsByStatus(req, res) {
     }
 }
 
+
 // Function to add analytics data to a campaign
 async function addAnalyticsData(req, res) {
     const { campaignId } = req.params;
     const { date, impressions, clicks } = req.body;
+    const userId = req.user._id; // Assuming the user ID is available in the request (e.g., through authentication middleware)
 
     try {
         // Find the campaign by ID
@@ -252,8 +258,8 @@ async function addAnalyticsData(req, res) {
             return res.status(404).json({ message: 'Campaign not found' });
         }
 
-        // Add new analytics data
-        campaign.analytics.push({ date, impressions, clicks });
+        // Add new analytics data with the user who added it
+        campaign.analytics.push({ date, impressions, clicks, addedBy: userId });
 
         // Save the updated campaign
         const updatedCampaign = await campaign.save();
@@ -263,6 +269,7 @@ async function addAnalyticsData(req, res) {
         res.status(500).json({ message: error.message });
     }
 }
+
 // Controller function to get the 10 most recent businesses
 async function getRecentBusinesses(req, res){
     try {
