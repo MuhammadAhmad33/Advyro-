@@ -265,14 +265,16 @@ const getFcmToken = async (req, res) => {
         const userId = req.params.id; // Assuming you're using middleware to set req.user
 
         // Find the user by ID
-        const user = await User.findById(userId).select('fcmToken'); // Only select the fcmToken field
+        const user = await User.findById(userId)
+        .populate('fcmToken') // Only select the fcmToken field
+        .populate('role')
 
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
 
         // Return the FCM token
-        res.status(200).json({ fcmToken: user.fcmToken });
+        res.status(200).json({ fcmToken: user.fcmToken, role: user.role });
     } catch (error) {
         console.error('Error retrieving FCM token:', error);
         res.status(500).json({ message: 'Error retrieving FCM token', error: error.message });
