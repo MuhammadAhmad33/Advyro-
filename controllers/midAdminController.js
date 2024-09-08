@@ -147,7 +147,6 @@ async function getAllDesignRequests(req, res) {
         const requests = await CustomDesignRequest.find()
             .populate('user', 'fullname email') // Populate user details
             .populate('business') // Populate complete business details
-            .populate('campaign'); // Populate complete campaign details
 
         res.status(200).json(requests);
     } catch (error) {

@@ -136,23 +136,21 @@ async function getCampaigns(req, res) {
 }
 
 async function requestMoreDesigns(req, res) {
-    const { description, businessId, campaignId } = req.body;
+    const { description, businessId } = req.body;
     const userId = req.user._id;
 
     try {
         // Validate that the business and campaign exist
         const business = await Business.findById(businessId);
-        const campaign = await Campaign.findById(campaignId);
 
         if (!business || !campaign) {
-            return res.status(400).json({ message: 'Invalid business or campaign ID' });
+            return res.status(400).json({ message: 'Invalid business ID' });
         }
 
         const newRequest = new CustomDesignRequest({
             user: userId,
             description,
             business: businessId,
-            campaign: campaignId,
             status: 'pending', // Initial status set to pending
         });
 
