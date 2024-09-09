@@ -322,6 +322,7 @@ async function editProfile(req, res) {
 
 async function uploadProfilePic(req, res) {
     const userId = req.user._id; // Ensure `req.user` has the `_id` property
+    const { fullname } = req.body; // Assuming the fullname is provided in the request body
 
     try {
         // Check if a file is uploaded
@@ -332,14 +333,24 @@ async function uploadProfilePic(req, res) {
         // Upload the profile picture to Azure Blob Storage
         const profilePicUrl = await uploadToAzureBlob(req.file.buffer, Date.now() + path.extname(req.file.originalname));
 
-        // Update the user's profile picture URL
-        await User.findByIdAndUpdate(userId, { profilePic: profilePicUrl });
+        // Update the user's profile picture URL and fullname
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { profilePic: profilePicUrl, fullname },
+            { new: true } // Return the updated document
+        );
 
-        res.status(200).json({ message: 'Profile picture uploaded successfully', profilePicUrl });
+        res.status(200).json({
+            message: 'Profile picture uploaded and name updated successfully',
+            updatedUser
+        });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 }
+
+module.exports = uploadProfilePic;
+
 
 
   

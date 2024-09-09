@@ -143,7 +143,7 @@ async function requestMoreDesigns(req, res) {
         // Validate that the business and campaign exist
         const business = await Business.findById(businessId);
 
-        if (!business || !campaign) {
+        if (!business) {
             return res.status(400).json({ message: 'Invalid business ID' });
         }
 
