@@ -19,6 +19,7 @@ router.get('/users/subscriptions', superAdminController.getAllUserEmailsAndSubsc
 router.get('/adminCode',auth,superAdminController.generateCode);
 router.get('/midAdmins',superAdminController.getAllMidAdmins);
 router.get('/subscriptions/counts', superAdminController.getSubscriptionCounts);
+router.get('/monthly-stats', superAdminController.getMonthlyStats);
 // Route to update mid admin permissions
 router.patch('/permissions/:id',superAdminController.updateMidAdminPermissions);
 // Route to delete mid admin

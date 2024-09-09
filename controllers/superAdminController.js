@@ -5,6 +5,7 @@ const ManagementRequest = require('../models/managementReq');
 const SubscriptionPlan = require('../models/subscriptionPlans');
 const AdminCode= require('../models/adminCode')
 const Business= require('../models/business');
+const Campaign= require('../models/campaigns')
 const config = require('../config/config');
 
 // Helper function to check if user is super admin
@@ -337,6 +338,85 @@ async function deleteMidAdmin(req, res) {
     }
 }
 
+async function getMonthlyStats(req, res) {
+    try {
+        const now = new Date();
+        const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+
+        // Fetch counts for users, campaigns, cancellations, and return rates
+        const thisMonthUserCount = await User.countDocuments({
+            createdAt: { $gte: startOfThisMonth }
+        });
+        const lastMonthUserCount = await User.countDocuments({
+            createdAt: { $gte: startOfLastMonth, $lt: startOfThisMonth }
+        });
+
+        const thisMonthCampaignCount = await Campaign.countDocuments({
+            createdAt: { $gte: startOfThisMonth }
+        });
+        const lastMonthCampaignCount = await Campaign.countDocuments({
+            createdAt: { $gte: startOfLastMonth, $lt: startOfThisMonth }
+        });
+
+        const thisMonthCanceledCampaignCount = await Campaign.countDocuments({
+            status: 'cancelled',
+            updatedAt: { $gte: startOfThisMonth }
+        });
+        const lastMonthCanceledCampaignCount = await Campaign.countDocuments({
+            status: 'cancelled',
+            updatedAt: { $gte: startOfLastMonth, $lt: startOfThisMonth }
+        });
+
+        const thisMonthReturningUsersCount = await getReturningUsersCount(startOfThisMonth, now);
+        const lastMonthReturningUsersCount = await getReturningUsersCount(startOfLastMonth, startOfThisMonth);
+
+        res.status(200).json({
+            totalUsers: {
+                thisMonth: thisMonthUserCount,
+                lastMonth: lastMonthUserCount
+            },
+            campaigns: {
+                created: {
+                    thisMonth: thisMonthCampaignCount,
+                    lastMonth: lastMonthCampaignCount
+                }
+            },
+            cancellations: {
+                thisMonth: thisMonthCanceledCampaignCount,
+                lastMonth: lastMonthCanceledCampaignCount
+            },
+            returnRate: {
+                thisMonth: thisMonthReturningUsersCount,
+                lastMonth: lastMonthReturningUsersCount
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching monthly stats:', error);
+        res.status(500).json({ message: error.message });
+    }
+}
+
+async function getReturningUsersCount(startDate, endDate) {
+    // Find all businesses with campaigns in the given date range
+    const businessesWithCampaignsThisMonth = await Campaign.distinct('business', {
+        'dateSchedule.startDate': { $gte: startDate, $lt: endDate }
+    });
+
+    // Find all these businesses that also have campaigns before the given date range
+    const returningUsers = await User.countDocuments({
+        businesses: { $in: businessesWithCampaignsThisMonth },
+        _id: { $in: (await Campaign.find({
+            'dateSchedule.startDate': { $lt: startDate },
+            business: { $in: businessesWithCampaignsThisMonth }
+        }).distinct('business')) }
+    });
+
+    return returningUsers;
+}
+
+
 module.exports = {
     addCoin,
     updateCoin,
@@ -354,4 +434,5 @@ module.exports = {
     getSubscriptionCounts,
     handleManagementRequest,
     deleteMidAdmin,
+    getMonthlyStats
 };

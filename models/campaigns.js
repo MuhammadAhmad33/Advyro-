@@ -75,6 +75,6 @@ const CampaignSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false
     },
     analytics: [AnalyticsSchema], // Array of analytics data
-});
+},{ timestamps: true });
 
 module.exports = mongoose.model('Campaign', CampaignSchema);
