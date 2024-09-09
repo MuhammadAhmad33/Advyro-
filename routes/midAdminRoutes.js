@@ -26,7 +26,7 @@ router.get('/design-requests', midAdminController.getAllDesignRequests);
 
 router.get('/allBusinessesandCampaigns', midAdminController.getAllBusinessesWithCampaigns);
 // Route to update the status of a design request
-router.patch('/design-requests/:requestId', midAdminController.updateDesignRequestStatus);
+router.patch('/design-requests/:requestId', auth, midAdminController.updateDesignRequestStatus);
 
 // Route to get businesses based on status
 router.get('/businesses/:status', midAdminController.getBusinessesByStatus);

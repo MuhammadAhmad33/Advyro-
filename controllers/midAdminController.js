@@ -67,36 +67,45 @@ async function uploadDesign(req, res) {
 
 async function changeBusinessStatus(req, res) {
     const { businessId, status, rejectionReason } = req.body;
-    const midAdminId = req.user.id;
+    const midAdminId = req.user._id;
 
     try {
+        // Check if the user is a mid admin
         const user = await User.findById(midAdminId);
         if (!user || user.role !== 'mid admin') {
             return res.status(403).json({ message: 'Access denied' });
         }
 
+        // Find the business by ID
         const business = await Business.findById(businessId);
         if (!business) {
             return res.status(404).json({ message: 'Business not found' });
         }
 
+        // Validate the status
         if (!['accepted', 'rejected'].includes(status)) {
             return res.status(400).json({ message: 'Invalid status' });
         }
 
+        // Update the business status and related fields
         business.status = status;
         business.statusChangedBy = midAdminId; // Set the mid-admin who changed the status
+
         if (status === 'rejected' && rejectionReason) {
             business.rejectionReason = rejectionReason;
         } else {
             business.rejectionReason = undefined; // Clear the rejection reason if not rejected
         }
+
         await business.save();
 
-        // Populate the statusChangedBy field with the user's name
-        const updatedBusiness = await Business.findById(businessId);
-
-        res.status(200).json({ message: `Business ${status} successfully`, business: updatedBusiness });
+        // Populate the statusChangedBy and managedBy fields with user's name and email
+        const updatedBusiness = await Business.findById(businessId)
+            .populate('statusChangedBy', 'fullname email')
+        res.status(200).json({
+            message: `Business ${status} successfully`,
+            business: updatedBusiness,
+        });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -132,7 +141,8 @@ async function updateCampaignStatus(req, res) {
         await campaign.save();
 
         // Populate the statusChangedBy field with the user's name
-        const updatedCampaign = await Campaign.findById(campaignId);
+        const updatedCampaign = await Campaign.findById(campaignId)
+        .populate('statusChangedBy', 'fullname email');
 
         res.status(200).json({ message: `Campaign ${status} successfully`, campaign: updatedCampaign });
     } catch (error) {
@@ -157,23 +167,34 @@ async function getAllDesignRequests(req, res) {
 
 // Function to update the status of a design request
 async function updateDesignRequestStatus(req, res) {
-    const { requestId } = req.params;
-    const { status, response } = req.body;
-
-    try {
-        const request = await CustomDesignRequest.findById(requestId);
-        if (!request) {
-            return res.status(404).json({ message: 'Request not found' });
+        const { requestId } = req.params;
+        const { status, response } = req.body;
+        const userId = req.user._id; // Assuming `req.user.id` contains the ID of the logged-in user
+    
+        try {
+            const request = await CustomDesignRequest.findById(requestId);
+            if (!request) {
+                return res.status(404).json({ message: 'Request not found' });
+            }
+    
+            // Update the status, response, and the user who changed the status
+            request.status = status;
+            request.response = response;
+            request.statusChangedBy = userId;
+    
+            await request.save();
+    
+            // Populate the statusChangedBy field with user's full name and email
+            const updatedRequest = await CustomDesignRequest.findById(requestId)
+                .populate('statusChangedBy', 'fullName email');
+    
+            res.status(200).json({
+                message: 'Request updated successfully',
+                request: updatedRequest,
+            });
+        } catch (error) {
+            res.status(500).json({ message: error.message });
         }
-
-        request.status = status;
-        request.response = response;
-        await request.save();
-
-        res.status(200).json({ message: 'Request updated successfully', request });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
 }
 
 // Function to get all businesses with their respective campaigns
