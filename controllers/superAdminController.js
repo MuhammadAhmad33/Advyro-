@@ -243,48 +243,63 @@ async function updateMidAdminPermissions(req, res) {
 
 async function getSubscriptionCounts(req, res) {
     try {
-        // Aggregate the counts of each subscription plan
+        // Aggregate the counts of each subscription plan and total user count
         const subscriptionCounts = await User.aggregate([
             {
-                $match: {
-                    "subscription.plan": { $ne: null } // Filter out documents where plan is null
-                }
-            },
-            {
-                $group: {
-                    _id: "$subscription.plan", // Group by subscription plan
-                    count: { $sum: 1 } // Count each occurrence
+                $facet: {
+                    totalUsers: [
+                        { $count: "count" } // Count total users
+                    ],
+                    plans: [
+                        { $match: { "subscription.plan": { $ne: null } } }, // Filter out null plans
+                        {
+                            $group: {
+                                _id: "$subscription.plan", // Group by subscription plan
+                                count: { $sum: 1 } // Count occurrences
+                            }
+                        },
+                        {
+                            $project: {
+                                _id: 0, // Exclude the _id field from the output
+                                plan: "$_id", // Rename _id to plan
+                                count: 1 // Include the count
+                            }
+                        }
+                    ]
                 }
             },
             {
                 $project: {
-                    _id: 0, // Exclude the _id field from the output
-                    plan: "$_id", // Rename _id to plan
-                    count: 1 // Include the count
+                    users: { $arrayElemAt: ["$totalUsers.count", 0] }, // Extract total user count
+                    plans: 1 // Keep the plans array
                 }
             }
         ]);
-        
+
         // Define the default plans with a count of 0
         const defaultPlans = [
             { plan: "basic", count: 0 },
             { plan: "standard", count: 0 },
             { plan: "pro", count: 0 }
         ];
-        
+
         // Create a map for existing counts for quick look-up
-        const countsMap = new Map(subscriptionCounts.map(sub => [sub.plan, sub.count]));
-        
+        const countsMap = new Map(subscriptionCounts[0].plans.map(sub => [sub.plan, sub.count]));
+
         // Merge the default plans with the results from the database
         const mergedCounts = defaultPlans.map(defaultPlan => ({
             plan: defaultPlan.plan,
             count: countsMap.get(defaultPlan.plan) || defaultPlan.count // Use existing count or default
         }));
-        
-        console.log(mergedCounts); // This will log the final merged counts
 
-        // Return the merged subscription counts
-        return res.status(200).json(mergedCounts);
+        // Prepare the final response
+        const response = {
+            users: subscriptionCounts[0].users || 0, // Total user count
+            plans: mergedCounts // Merged subscription counts
+        };
+
+        // Return the final response
+        return res.status(200).json(response);
     } catch (error) {
         console.error('Error fetching subscription counts:', error);
         return res.status(500).json({ message: 'Error fetching subscription counts', error: error.message });
