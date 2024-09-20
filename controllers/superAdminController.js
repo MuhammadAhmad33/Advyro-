@@ -246,6 +246,11 @@ async function getSubscriptionCounts(req, res) {
         // Aggregate the counts of each subscription plan
         const subscriptionCounts = await User.aggregate([
             {
+                $match: {
+                    "subscription.plan": { $ne: null } // Filter out documents where plan is null
+                }
+            },
+            {
                 $group: {
                     _id: "$subscription.plan", // Group by subscription plan
                     count: { $sum: 1 } // Count each occurrence
@@ -259,14 +264,33 @@ async function getSubscriptionCounts(req, res) {
                 }
             }
         ]);
+        
+        // Define the default plans with a count of 0
+        const defaultPlans = [
+            { plan: "basic", count: 0 },
+            { plan: "standard", count: 0 },
+            { plan: "pro", count: 0 }
+        ];
+        
+        // Create a map for existing counts for quick look-up
+        const countsMap = new Map(subscriptionCounts.map(sub => [sub.plan, sub.count]));
+        
+        // Merge the default plans with the results from the database
+        const mergedCounts = defaultPlans.map(defaultPlan => ({
+            plan: defaultPlan.plan,
+            count: countsMap.get(defaultPlan.plan) || defaultPlan.count // Use existing count or default
+        }));
+        
+        console.log(mergedCounts); // This will log the final merged counts
 
-        // Return the subscription counts
-        return res.status(200).json(subscriptionCounts);
+        // Return the merged subscription counts
+        return res.status(200).json(mergedCounts);
     } catch (error) {
         console.error('Error fetching subscription counts:', error);
         return res.status(500).json({ message: 'Error fetching subscription counts', error: error.message });
     }
-};
+}
+
 
 // Endpoint to approve or reject management requests
 async function handleManagementRequest(req, res) {
