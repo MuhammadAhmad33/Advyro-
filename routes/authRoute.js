@@ -79,4 +79,7 @@ router.put('/editUser/:id', authController.editProfile);
 
 router.get('/:id/fcm-token', authController.getFcmToken); 
 
+// DELETE /users/:id
+router.delete('/delUser', auth, authController.deleteUser);
+
 module.exports = router;

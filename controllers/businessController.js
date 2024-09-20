@@ -44,6 +44,17 @@ async function uploadToAzureBlob(fileBuffer, fileName) {
     return blockBlobClient.url;
 }
 
+async function deleteFromAzureBlob(fileName) {
+
+    const containerClient = blobServiceClient.getContainerClient(config.AZURE_CONTAINER_NAME);
+    const blockBlobClient = containerClient.getBlockBlobClient(fileName);
+
+    await blockBlobClient.delete();
+    return;
+}
+
+
+
 async function addBusiness(req, res) {
     const { 
         name, phone, location, targetMapArea, description,
@@ -244,17 +255,22 @@ async function editBusiness(req, res) {
         if (linkedinUrl !== undefined) business.linkedinUrl = linkedinUrl;
         if (tiktokUrl !== undefined) business.tiktokUrl = tiktokUrl;
 
-        // Remove gallery items from Azure Blob Storage
+        // Remove gallery items from Azure Blob Storage if URLs are provided
         if (removeGalleryItems && Array.isArray(removeGalleryItems)) {
-            for (const url of removeGalleryItems) {
-                // Extract the filename from the URL
-                const fileName = url.split('/').pop();
+            for (const urlToRemove of removeGalleryItems) {
+                // Find the corresponding URL in the gallery
+                const index = business.gallery.indexOf(urlToRemove);
                 
-                // Delete the blob from Azure
-                await deleteFromAzureBlob(fileName);
-                
-                // Remove the URL from the gallery array
-                business.gallery = business.gallery.filter(item => item !== url);
+                if (index > -1) {
+                    // Extract the filename from the URL
+                    const fileName = urlToRemove.split('/').pop();
+                    
+                    // Delete the blob from Azure
+                    await deleteFromAzureBlob(fileName);
+                    
+                    // Remove the URL from the gallery array
+                    business.gallery.splice(index, 1);
+                }
             }
         }
 
@@ -282,6 +298,7 @@ async function editBusiness(req, res) {
         res.status(500).json({ message: error.message });
     }
 }
+
 
 async function deleteBusiness(req, res) {
     const { businessId } = req.params; // Get the business ID from the request parameters

@@ -1,4 +1,8 @@
 const User = require('../models/users');
+const Business = require('../models/business');
+const Campaign = require('../models/campaigns');
+const ManagementRequest = require('../models/managementReq'); 
+const CustomDesignRequest = require('../models/designRequest');
 const AdminCode = require('../models/adminCode')
 const { generateToken } = require('../utils/jwt');
 const bcrypt = require('bcryptjs');
@@ -349,7 +353,42 @@ async function uploadProfilePic(req, res) {
     }
 }
 
-module.exports = uploadProfilePic;
+async function deleteUser (req, res){
+    const userId = req.user._id;
+
+    try {
+        // Find the user and populate the businesses
+        const user = await User.findById(userId)
+            .populate('businesses');
+
+        if (!user) {
+            return res.status(404).send('User not found.');
+        }
+
+        // Delete all businesses owned by the user
+        if (user.businesses.length > 0) {
+            // Delete campaigns associated with each business
+            await Campaign.deleteMany({ business: { $in: user.businesses } });
+
+            // Delete custom design requests associated with the user
+            await CustomDesignRequest.deleteMany({ user: userId });
+
+            // Delete all businesses
+            await Business.deleteMany({ _id: { $in: user.businesses } });
+        }
+
+        // Optionally, handle other related data, such as campaigns directly managed by the user
+        await Campaign.deleteMany({ statusChangedBy: userId });
+        
+        // Finally, delete the user
+        await User.findByIdAndDelete(userId);
+
+        res.status(200).send('User and all related data deleted successfully.');
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error deleting user: ' + error.message);
+    }
+};
 
 
 
@@ -365,4 +404,5 @@ module.exports = {
     getUserById,
     editProfile,
     uploadProfilePic:[upload,uploadProfilePic],
+    deleteUser
 };
