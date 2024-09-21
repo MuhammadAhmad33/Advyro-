@@ -9,6 +9,7 @@ const midAdminRoute = require('./routes/midAdminRoutes');
 const superAdminRoute = require('./routes/superAdminRoutes');
 const stripeRoute = require('./routes/stripeRoutes');
 const coinRoute = require('./routes/coinRoute');
+const walletRoute = require('./routes/walletRoute'); // Import wallet routes
 const app = express();
 
 app.use(express.json()); // Middleware for parsing JSON
@@ -21,6 +22,7 @@ app.use('/midAdmin', midAdminRoute);
 app.use('/coin', coinRoute);
 app.use('/superAdmin', superAdminRoute);
 app.use('/stripe', stripeRoute);
+app.use('/wallet', walletRoute); // Add wallet routes
 
 // Error handling middleware
 app.use((err, req, res, next) => {

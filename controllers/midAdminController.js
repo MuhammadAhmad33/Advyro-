@@ -8,6 +8,7 @@ const multer = require('multer');
 const path = require('path');
 const AdBannerDesign = require('../models/designs');
 const config = require('../config/config')
+const mongoose = require('mongoose');
 
 // Azure Blob Storage setup
 const blobServiceClient = BlobServiceClient.fromConnectionString(config.AZURE_STORAGE_CONNECTION_STRING);
@@ -28,15 +29,26 @@ async function uploadToAzureBlob(fileBuffer, fileName) {
 }
 
 
-// Function to handle design upload
 async function uploadDesign(req, res) {
     const userId = req.user._id; // Ensure `req.user` has the `_id` property
+    const businessId = req.query.businessId || null; // Extract businessId from query parameters, default to empty string
 
     try {
         // Check if user is a mid admin
         const user = await User.findById(userId);
         if (user.role !== 'mid admin') {
             return res.status(403).json({ message: 'You are not authorized to upload designs' });
+        }
+
+        // Validate businessId if provided
+        if (businessId) {
+            if (!mongoose.Types.ObjectId.isValid(businessId)) {
+                return res.status(400).json({ message: 'Invalid business ID format' });
+            }
+            const business = await Business.findById(businessId);
+            if (!business) {
+                return res.status(400).json({ message: 'Business not found' });
+            }
         }
 
         // Ensure files are uploaded
@@ -54,7 +66,8 @@ async function uploadDesign(req, res) {
         // Save design info to the database
         const newDesigns = designUrls.map(designUrl => ({
             fileUrl: designUrl,
-            uploadedBy: userId
+            uploadedBy: userId,
+            businessId: businessId // Assign businessId (can be an empty string)
         }));
 
         const savedDesigns = await AdBannerDesign.insertMany(newDesigns);
@@ -64,6 +77,7 @@ async function uploadDesign(req, res) {
         res.status(500).json({ message: error.message });
     }
 }
+
 
 async function changeBusinessStatus(req, res) {
     const { businessId, status, rejectionReason } = req.body;

@@ -7,13 +7,15 @@ const CustomDesignRequest = require('../models/designRequest');
 const multer = require('multer');
 const path = require('path');
 const config=require('../config/config')
+const Wallet = require('../models/wallet');
+const Transaction = require('../models/transaction');
 
 // Azure Blob Storage setup
 const blobServiceClient = BlobServiceClient.fromConnectionString(config.AZURE_STORAGE_CONNECTION_STRING);
 const containerClient = blobServiceClient.getContainerClient(config.AZURE_CONTAINER_NAME);
 
 // Multer setup to store files in memory
-const storage = multer.memoryStorage(); 
+const storage = multer.memoryStorage();
 const upload = multer({
     storage: storage,
     limits: { fileSize: 10 * 1024 * 1024 },
@@ -36,12 +38,16 @@ async function uploadToAzureBlob(fileBuffer, fileName) {
 }
 
 async function createCampaign(req, res) {
-    const { businessId, adsName, campaignDesc, campaignPlatforms, startDate, endDate, startTime, endTime } = req.body;
+    const { businessId, adsName, campaignDesc, campaignPlatforms, startDate, endDate, startTime, endTime, cost } = req.body;
     const userId = req.user._id;
 
     try {
-        const business = await Business.findById(businessId);
+        // Check if the cost is provided and valid
+        if (!cost || isNaN(cost) || cost <= 0) {
+            return res.status(400).json({ message: 'Invalid or missing campaign cost. Cost must be a positive number.' });
+        }
 
+        const business = await Business.findById(businessId);
         if (!business) {
             return res.status(404).json({ message: 'Business not found' });
         }
@@ -56,6 +62,7 @@ async function createCampaign(req, res) {
             adBannerUrl = await uploadToAzureBlob(req.file.buffer, fileName);
         }
 
+        // Create a new campaign object including the cost
         const newCampaign = new Campaign({
             adBanner: adBannerUrl,
             business: businessId,
@@ -68,6 +75,7 @@ async function createCampaign(req, res) {
             },
             startTime,
             endTime,
+            cost, // Add cost to the campaign
             status: 'pending', // Set initial status to pending
         });
 
@@ -86,6 +94,7 @@ async function createCampaign(req, res) {
         res.status(500).json({ message: error.message });
     }
 }
+
 
 
 async function payCampaignFee(req, res) {
@@ -162,8 +171,8 @@ async function requestMoreDesigns(req, res) {
 }
 
 async function cancelCampaign(req, res) {
-    const { campaignId } = req.body; // No need for cancellation reason
-    const userId = req.user._id; // Ensure `req.user` has the `_id` property
+    const { campaignId } = req.body;
+    const userId = req.user._id;
 
     try {
         const campaign = await Campaign.findById(campaignId).populate('business');
@@ -178,12 +187,41 @@ async function cancelCampaign(req, res) {
 
         // Change the status to 'cancelled'
         campaign.status = 'cancelled';
-
         await campaign.save();
 
-        res.status(200).json({ 
-            message: 'Campaign cancelled successfully', 
-            campaign 
+        // Refund logic
+        const refundAmount = campaign.cost; // Assuming `cost` is a field in your campaign model
+        const wallet = await Wallet.findOne({ user_id: userId });
+
+        if (!wallet) {
+            // Create a new wallet if it doesn't exist
+            const newWallet = new Wallet({
+                user_id: userId,
+                balance: refundAmount,
+                last_updated: Date.now(),
+            });
+            await newWallet.save();
+        } else {
+            // Add the refund amount to the existing wallet
+            wallet.balance += refundAmount;
+            wallet.last_updated = Date.now();
+            await wallet.save();
+        }
+
+        // Create a refund transaction
+        const transaction = new Transaction({
+            user_id: userId,
+            type: 'payment', // Type is payment since it’s a refund
+            amount: refundAmount,
+            status: 'completed',
+            created_at: Date.now(),
+        });
+        await transaction.save();
+
+        res.status(200).json({
+            message: 'Campaign cancelled successfully, and refund processed',
+            campaign,
+            refundAmount,
         });
 
     } catch (error) {
@@ -229,9 +267,11 @@ async function getAllDesigns(req, res) {
             .populate('dislikes', 'fullname email') // Populate user details for dislikes
             .lean();
 
-        // Format each design with user details and counts for likes and dislikes
+        // Format each design with user details, counts for likes and dislikes,
+        // and set business to an empty string if it's null
         const designsWithCounts = designs.map(design => ({
             ...design,
+            businessId: design.businessId ? design.businessId : "", // Set business to an empty string if null
             likeCount: (design.likes && design.likes.length) || 0,
             dislikeCount: (design.dislikes && design.dislikes.length) || 0,
             likedByUsers: design.likes ? design.likes.map(user => ({ fullname: user.fullname, email: user.email })) : [],
@@ -239,6 +279,40 @@ async function getAllDesigns(req, res) {
         }));
 
         res.status(200).json({ designs: designsWithCounts });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+}
+
+// Edit Design with Comment API
+async function editDesign(req, res) {
+    console.log(`Edit Design`);
+    const { businessId, designId, comment } = req.body;  // Business ID and Design ID from request body
+
+    try {
+        // Validate that the business exists and belongs to the user
+        const business = await Business.findById(businessId);
+        if (!business) {
+            return res.status(404).json({ message: 'Business not found' });
+        }
+
+        // Find the design by designId
+        const tempDesign = await AdBannerDesign.findById(designId);
+        if (!tempDesign) {
+            return res.status(404).json({ message: 'Design not found' });
+        }
+
+        // Here, you can add the logic for editing the design
+        // For example, if you want to add a comment, you can update the design object
+        tempDesign.comment = comment;  // Assuming a comment field is added in the model
+
+        // Save the updated design
+        const design = await tempDesign.save();
+
+        res.status(200).json({
+            message: 'Design Update Send',
+            design,
+        });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -323,6 +397,6 @@ module.exports = {
     getAllDesigns,
     deleteAllCampaigns,
     likeDesign,
-    dislikeDesign
-    
+    dislikeDesign,
+    editDesign
 };

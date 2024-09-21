@@ -22,11 +22,11 @@ const BusinessSchema = new mongoose.Schema({
         required: true,
     },
     gallery: {
-        type: [String], // Array of file paths or URLs
+        type: [String],
         required: false,
     },
     logo: {
-        type: String, // Single file path or URL
+        type: String,
         required: false,
     },
     owner: {
@@ -34,7 +34,7 @@ const BusinessSchema = new mongoose.Schema({
         ref: 'User',
         required: true,
     },
-    managedBy: { // New field to indicate which mid admin is managing the business
+    managedBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: false,
@@ -74,7 +74,7 @@ const BusinessSchema = new mongoose.Schema({
     },
     createdAt: {
         type: Date,
-        default: Date.now, // Automatically set the current date when a document is created
+        default: Date.now,
     },
 });
 

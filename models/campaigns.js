@@ -70,11 +70,17 @@ const CampaignSchema = new mongoose.Schema({
         type: String,
         required: false,
     },
-    statusChangedBy: 
-    { 
-        type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false
+    statusChangedBy: { 
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: 'User', 
+        required: false,
+    },
+    cost: {
+        type: Number, // Double value representing the campaign cost in dollars
+        required: true,
+        min: 0.0, // Optional validation to ensure non-negative values
     },
     analytics: [AnalyticsSchema], // Array of analytics data
-},{ timestamps: true });
+}, { timestamps: true });
 
 module.exports = mongoose.model('Campaign', CampaignSchema);
