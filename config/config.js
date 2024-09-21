@@ -1,8 +1,6 @@
 const mongoose = require('mongoose');
 const StripeKey = require('../models/stripeKey'); // Adjust the path as needed
 
-const isLocal = true;
-
 // Default Stripe secret key for fallback
 const defaultStripeKey = 'sk_test_51PWFAtRsuZrhcR6RkARSyeTININjrF9jCGyX578O6uoZJBjtuTYwcIfjGarejovYy4O1ONuLhiiZksJpcRU5BUzE0063W9ijCB';
 
@@ -25,7 +23,7 @@ async function fetchStripeSecretKey() {
 
 // Initialize configuration object
 const config = {
-    mongoURI: isLocal ? 'mongodb://localhost:27017/yourLocalDB' : 'mongodb+srv://Sleek:1Hmi6EHEptDrvFdU@cluster0.v6ci4ot.mongodb.net/',
+    mongoURI: 'mongodb+srv://Sleek:1Hmi6EHEptDrvFdU@cluster0.v6ci4ot.mongodb.net/',
     JWT_SECRET: 'Advyro',
     resendApiKey: 're_KXbbyurt_6evMKBFkGNgMaWwCYpQk2qnN',
     STRIPE_SECRET_KEY: "sk_test_51PWFAtRsuZrhcR6RkARSyeTININjrF9jCGyX578O6uoZJBjtuTYwcIfjGarejovYy4O1ONuLhiiZksJpcRU5BUzE0063W9ijCB",
