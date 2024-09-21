@@ -3,25 +3,24 @@ const mongoose = require('mongoose');
 const express = require('express');
 const authRoute = require('./routes/authRoute');
 const config = require('./config/config');
-const businessRoute = require('./routes/businessRoute')
-const campaignRoute = require('./routes/campaignRoutes')
-const midAdminRoute = require('./routes/midAdminRoutes')
-const superAdminRoute= require('./routes/superAdminRoutes')
-const stripeRoute=require('./routes/stripeRoutes')
-const coinRoute=require('./routes/coinRoute')
+const businessRoute = require('./routes/businessRoute');
+const campaignRoute = require('./routes/campaignRoutes');
+const midAdminRoute = require('./routes/midAdminRoutes');
+const superAdminRoute = require('./routes/superAdminRoutes');
+const stripeRoute = require('./routes/stripeRoutes');
+const coinRoute = require('./routes/coinRoute');
 const app = express();
 
 app.use(express.json()); // Middleware for parsing JSON
 
-
 // Use routes
 app.use('/user', authRoute);
-app.use('/business',businessRoute)
-app.use('/campaign',campaignRoute)
-app.use('/midAdmin',midAdminRoute)
-app.use('/coin',coinRoute)
-app.use('/superAdmin',superAdminRoute)
-app.use('/stripe',stripeRoute)
+app.use('/business', businessRoute);
+app.use('/campaign', campaignRoute);
+app.use('/midAdmin', midAdminRoute);
+app.use('/coin', coinRoute);
+app.use('/superAdmin', superAdminRoute);
+app.use('/stripe', stripeRoute);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
