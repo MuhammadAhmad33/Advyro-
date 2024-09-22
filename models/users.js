@@ -35,12 +35,17 @@ const UserSchema = new mongoose.Schema({
     subscription: {
         plan: {
             type: String,
-            enum: ['basic', 'standard', 'pro']
+            enum: ['basic', 'standard', 'pro'],
+            default: 'basic'
         },
         startDate: {
             type: Date,
             default: null,
         },
+        expiryDate: { 
+            type: Date,
+            default: null,
+        }
     },
     businesses: [{
         type: mongoose.Schema.Types.ObjectId,

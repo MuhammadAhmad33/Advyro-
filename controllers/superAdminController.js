@@ -151,6 +151,7 @@ async function getAllSubscriptionPlans(req, res) {
         res.status(500).json({ message: 'An error occurred while fetching subscription plans' });
     }
 }
+
 // Endpoint to get all management requests
 async function viewManagementrequests(req, res){
     try {
