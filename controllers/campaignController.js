@@ -127,18 +127,20 @@ async function payCampaignFee(req, res) {
     }
 }
 
-
 async function getCampaigns(req, res) {
     const businessId = req.params.businessId;
 
     try {
         const campaigns = await Campaign.find({ business: businessId });
 
-        if (!campaigns) {
+        // Filter out campaigns where business is null
+        const filteredCampaigns = campaigns.filter(campaign => campaign.business !== null);
+
+        if (filteredCampaigns.length === 0) {
             return res.status(404).json({ message: 'No campaigns found for this business' });
         }
 
-        res.status(200).json({ campaigns });
+        res.status(200).json({ campaigns: filteredCampaigns });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

@@ -112,17 +112,24 @@ async function getUserBusinesses(req, res) {
     const userId = req.user._id; // Ensure `req.user` has the `_id` property
 
     try {
-        const user = await User.findById(userId).populate('businesses');
+        const user = await User.findById(userId)
+            .populate({
+                path: 'businesses',
+                match: { owner: { $ne: null } } // Ensure only businesses with a non-null owner are returned
+            });
+
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        res.status(200).json({ businesses: user.businesses });
+        // Filter out any businesses where owner is still null
+        const validBusinesses = user.businesses.filter(business => business.owner !== null);
+
+        res.status(200).json({ businesses: validBusinesses });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
-};
-
+}
 
 const selectSubscriptionPlan = async (req, res) => {
     try {

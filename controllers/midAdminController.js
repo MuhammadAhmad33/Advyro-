@@ -168,15 +168,32 @@ async function updateCampaignStatus(req, res) {
 // Function to get all design requests
 async function getAllDesignRequests(req, res) {
     try {
-        const requests = await CustomDesignRequest.find()
-            .populate('user', 'fullname email') // Populate user details
-            .populate('business') // Populate complete business details
+        const requests = await CustomDesignRequest.find({
+            user: { $ne: null },
+            business: { $ne: null }
+        })
+        .populate({
+            path: 'user',
+            select: 'fullname email',
+            match: { _id: { $ne: null } } // Ensure populated user is not null
+        })
+        .populate({
+            path: 'business',
+            match: { _id: { $ne: null } } // Ensure populated business is not null
+        });
 
-        res.status(200).json(requests);
+        // Filter out requests where user or business is still null after populate
+        const filteredRequests = requests.filter(
+            (request) => request.user !== null && request.business !== null
+        );
+
+        res.status(200).json(filteredRequests);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 }
+
+
 
 
 // Function to update the status of a design request
@@ -217,12 +234,18 @@ async function getAllBusinessesWithCampaigns(req, res) {
         // Find all businesses and populate owner details
         const businesses = await Business.find().populate({
             path: 'owner',
-            select: 'name email', // Select specific fields from owner
+            select: 'name email _id', // Ensure both email and _id are selected
         });
 
-        // Fetch campaigns for each business
+        // Filter out businesses where owner is null or missing _id or email
+        const validBusinesses = businesses.filter(business => {
+            const owner = business.owner;
+            return owner && owner._id && owner.email;
+        });
+
+        // Fetch campaigns for each valid business
         const businessesWithCampaigns = await Promise.all(
-            businesses.map(async (business) => {
+            validBusinesses.map(async (business) => {
                 const campaigns = await Campaign.find({ business: business._id });
                 return {
                     business,
@@ -231,12 +254,13 @@ async function getAllBusinessesWithCampaigns(req, res) {
             })
         );
 
-        // Return businesses with their campaigns
+        // Return filtered businesses with their campaigns
         res.status(200).json({ businesses: businessesWithCampaigns });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 }
+
 
 // Function to get businesses based on status
 async function getBusinessesByStatus(req, res) {
@@ -246,15 +270,22 @@ async function getBusinessesByStatus(req, res) {
         // Fetch businesses based on status and populate owner details
         const businesses = await Business.find({ status }).populate({
             path: 'owner',
-            select: 'name email',
+            select: 'name email _id', // Ensure both email and _id are selected
         });
 
-        // Return businesses filtered by status
-        res.status(200).json({ businesses });
+        // Filter out businesses where owner is null or missing _id or email
+        const validBusinesses = businesses.filter(business => {
+            const owner = business.owner;
+            return owner && owner._id && owner.email;
+        });
+
+        // Return businesses filtered by status and valid owner
+        res.status(200).json({ businesses: validBusinesses });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 }
+
 
 async function getCampaignsByStatus(req, res) {
     const { status } = req.params; // 'pending', 'approved', 'rejected'
@@ -264,19 +295,38 @@ async function getCampaignsByStatus(req, res) {
         const campaigns = await Campaign.find({ status })
             .populate({
                 path: 'business',
-                select: 'name location owner', // Select specific fields from business, including the owner
+                select: 'name location owner',
                 populate: {
-                    path: 'owner', // Populate the user (owner) from the business
-                    select: 'fullname email', // Select specific fields from user
+                    path: 'owner',
+                    select: 'fullname email',
                 },
             });
 
-        // Return campaigns filtered by status
-        res.status(200).json({ campaigns });
+        // Filter out campaigns where business or any of its fields are null
+        const filteredCampaigns = campaigns.filter(campaign => {
+            const business = campaign.business;
+            return (
+                business && 
+                business._id && 
+                business.name && 
+                business.location && 
+                business.owner && 
+                business.owner._id && 
+                business.owner.fullname && 
+                business.owner.email
+            );
+        });
+
+        if (filteredCampaigns.length === 0) {
+            return res.status(404).json({ message: 'No valid campaigns found for the given status' });
+        }
+
+        res.status(200).json({ campaigns: filteredCampaigns });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 }
+
 
 
 // Function to add analytics data to a campaign
@@ -306,18 +356,22 @@ async function addAnalyticsData(req, res) {
 }
 
 // Controller function to get the 10 most recent businesses
-async function getRecentBusinesses(req, res){
+async function getRecentBusinesses(req, res) {
     try {
-      const recentBusinesses = await Business.find()
-        .sort({ createdAt: -1 }) // Sort by createdAt field in descending order
-        .limit(10); // Limit the results to 10
-  
-      return res.status(200).json(recentBusinesses);
+        const recentBusinesses = await Business.find()
+            .sort({ createdAt: -1 }) // Sort by createdAt field in descending order
+            .limit(10); // Limit the results to 10
+
+        // Filter out businesses where owner is null
+        const filteredBusinesses = recentBusinesses.filter(business => business.owner !== null);
+
+        return res.status(200).json(filteredBusinesses);
     } catch (error) {
-      console.error('Error fetching recent businesses:', error);
-      return res.status(500).json({ message: 'Error fetching recent businesses', error: error.message });
+        console.error('Error fetching recent businesses:', error);
+        return res.status(500).json({ message: 'Error fetching recent businesses', error: error.message });
     }
-};
+}
+
 
 async function requestBusinessManagement(req, res) {
     const { businessId } = req.body; // Expecting business ID in the request body
