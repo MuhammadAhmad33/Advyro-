@@ -27,7 +27,6 @@ router.post('/select-plan', [
 router.get('/payment-success', 
     auth, 
     [
-        check('session_id').notEmpty().withMessage('Session ID is required'),
         check('plan').isIn(['basic', 'standard', 'pro']).withMessage('Invalid subscription plan')
     ],
     businessController.confirmPaymentAndUpdateSubscription

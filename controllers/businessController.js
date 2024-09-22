@@ -175,15 +175,9 @@ const selectSubscriptionPlan = async (req, res) => {
 };
 
 const confirmPaymentAndUpdateSubscription = async (req, res) => {
-    const { session_id, plan } = req.query;
+    const { plan } = req.query;
 
     try {
-        // Retrieve the session from Stripe using the session ID
-        const session = await retrieveSession(session_id);
-        console.log(session);
-
-        // Check if the payment was successful
-        if (session.payment_status === 'paid') {
             // Update user subscription in the database
             const user = await User.findById(req.user._id);
 
@@ -211,9 +205,6 @@ const confirmPaymentAndUpdateSubscription = async (req, res) => {
             } else {
                 res.status(404).json({ message: 'User not found' });
             }
-        } else {
-            res.status(400).json({ message: 'Payment not completed' });
-        }
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
