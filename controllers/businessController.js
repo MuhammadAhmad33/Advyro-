@@ -196,7 +196,7 @@ const confirmPaymentAndUpdateSubscription = async (req, res) => {
 
                 user.subscription.plan = plan;
                 user.subscription.startDate = Date.now();
-                user.subscription.expiryDate = new Date(Date.now() + subscriptionPlan.duration * 30 * 24 * 60 * 60 * 1000); // Calculate expiry date
+                user.subscription.expiryDate = new Date(Date.now() + subscriptionPlan.duration * 30 * 24 * 60 * 60 * 1000);
                 
                 await user.save();
 

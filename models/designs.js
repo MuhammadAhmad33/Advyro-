@@ -28,11 +28,7 @@ const AdBannerDesignSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User', // Reference to the users who disliked the design
         default: [] // Ensure an empty array by default
-    }],
-    comment: {
-        type: String,
-        default: '', // Optional
-    },    
+    }],  
 });
 
 module.exports = mongoose.model('AdBannerDesign', AdBannerDesignSchema);

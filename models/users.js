@@ -44,7 +44,7 @@ const UserSchema = new mongoose.Schema({
         },
         expiryDate: { 
             type: Date,
-            default: null,
+            default: "",
         }
     },
     businesses: [{
