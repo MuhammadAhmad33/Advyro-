@@ -88,7 +88,7 @@ async function registerUser(req, res) {
 async function loginUser(req, res) {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+        return res.status(400).json({ message: errors.array()[0].msg });
     }
 
     const { email, password, fcmToken } = req.body;
@@ -113,7 +113,7 @@ async function loginUser(req, res) {
         res.status(200).json({ message: 'Login successful', user, token, fcmToken });
     } catch (error) {
         console.error('Error logging in:', error);
-        res.status(500).json({ message: 'Error logging in: ${error.message}' });
+        res.status(500).json({ message: `Error logging in: ${error.message}` });
     }
 }
 
