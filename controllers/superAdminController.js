@@ -145,11 +145,29 @@ async function deleteSubscriptionPlan(req, res) {
 async function getAllSubscriptionPlans(req, res) {
     try {
         const plans = await SubscriptionPlan.find();
-        res.status(200).json(plans);
+
+        // Sort the plans in the order: Basic, Standard, Pro, regardless of case
+        const order = ['Basic', 'Standard', 'Pro'];
+        const sortedPlans = plans.sort((a, b) => {
+            return order.indexOf(capitalizeFirstLetter(a.name)) - order.indexOf(capitalizeFirstLetter(b.name));
+        });
+
+        // Capitalize the first letter of each plan's name before returning the response
+        const formattedPlans = sortedPlans.map(plan => ({
+            ...plan._doc, // Spread the plan object to keep other fields intact
+            name: capitalizeFirstLetter(plan.name) // Capitalize the first letter of the name
+        }));
+
+        res.status(200).json(formattedPlans);
     } catch (error) {
         console.error('Error fetching subscription plans:', error);
         res.status(500).json({ message: 'An error occurred while fetching subscription plans' });
     }
+}
+
+// Helper function to capitalize the first letter of a string and make the rest lowercase
+function capitalizeFirstLetter(string) {
+    return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
 }
 
 // Endpoint to get all management requests

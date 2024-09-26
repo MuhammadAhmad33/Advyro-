@@ -100,7 +100,7 @@ exports.getChatDetail = async (req, res) => {
 };
 
 // Send Message (User to Super Admin)
-exports.sendMessage = async (req, res) => {
+exports.sendUserMessage = async (req, res) => {
   const { userId, text } = req.body;
   try {
     let chat = await Chat.findOne({ user_id: userId });
@@ -115,7 +115,7 @@ exports.sendMessage = async (req, res) => {
     chat.messages.push({
       message_type: 'message',
       text,
-      sender: 'user',
+      sender: 'user', // sender type for users
       is_read: false,
     });
 
@@ -125,7 +125,39 @@ exports.sendMessage = async (req, res) => {
 
     await chat.save();
 
-    return res.status(200).json({ message: 'Message sent successfully'});
+    return res.status(200).json({ message: 'Message sent successfully' });
+  } catch (error) {
+    return res.status(500).json({ message: 'Server error', error });
+  }
+};
+
+// Send Message (Super Admin to User)
+exports.sendAdminMessage = async (req, res) => {
+  const { userId, text } = req.body;
+  try {
+    let chat = await Chat.findOne({ user_id: userId });
+
+    if (!chat) {
+      chat = new Chat({
+        user_id: userId,
+        messages: [],
+      });
+    }
+
+    chat.messages.push({
+      message_type: 'message',
+      text,
+      sender: 'admin', // sender type for super admins
+      is_read: true, // Mark as read since admin is sending the message
+    });
+
+    chat.last_message = text;
+    chat.last_message_time = Date.now();
+    chat.last_message_read = true;
+
+    await chat.save();
+
+    return res.status(200).json({ message: 'Admin message sent successfully' });
   } catch (error) {
     return res.status(500).json({ message: 'Server error', error });
   }
