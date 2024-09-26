@@ -8,7 +8,7 @@ const transactionSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['payment', 'withdraw'],  // Can be 'payment' or 'withdraw'
+    enum: ['payment', 'withdraw'],  // 'payment' can also represent refunds
     required: true,
   },
   amount: {

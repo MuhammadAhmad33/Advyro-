@@ -1,20 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const walletController = require('../controllers/walletController');
+const chatController = require('../controllers/chatController');
 
-// Get Wallet Balance
-router.get('/:userId', walletController.getWalletBalance);
+// GET wallet by user ID
+router.get('/:userId', walletController.getWalletAndWithdrawalInfo);
 
-// Get Payment History
-router.get('/:userId/payments', walletController.getPaymentHistory);
+// POST to add amount to wallet
+router.post('/add/:userId', walletController.addAmountToWallet);
 
-// Get Withdrawal History
-router.get('/:userId/withdrawals', walletController.getWithdrawalHistory);
-
-// Withdraw Amount
-router.post('/withdraw', walletController.withdrawAmount);
-
-// Add Refund to Wallet
-router.post('/refund', walletController.addRefundToWallet);
+// POST to send a withdrawal request (Handled by ChatController as specified)
+router.post('/withdraw', chatController.sendWithdrawalRequest);
 
 module.exports = router;
