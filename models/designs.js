@@ -14,6 +14,11 @@ const AdBannerDesignSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
     },
+    comment:{
+        type: String, // URL of the uploaded design
+        required: false,
+        default: ""
+    },
     businessId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Business', // Reference to the associated business

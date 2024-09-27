@@ -273,6 +273,7 @@ async function getAllDesigns(req, res) {
         // and set business to an empty string if it's null
         const designsWithCounts = designs.map(design => ({
             ...design,
+            comment: design.comment || "", // Include the comment field, default to empty string if undefined
             businessId: design.businessId ? design.businessId : "", // Set business to an empty string if null
             likeCount: (design.likes && design.likes.length) || 0,
             dislikeCount: (design.dislikes && design.dislikes.length) || 0,
@@ -286,39 +287,68 @@ async function getAllDesigns(req, res) {
     }
 }
 
+
 // Edit Design with Comment API
 async function editDesign(req, res) {
     console.log(`Edit Design`);
-    const { businessId, designId, comment } = req.body;  // Business ID and Design ID from request body
+
+    const { businessId, designId, comment } = req.body;
+
+    // Validate that required fields are provided
+    if (!businessId) {
+        return res.status(400).json({ message: 'Business ID is required' });
+    }
+
+    if (!designId) {
+        return res.status(400).json({ message: 'Design ID is required' });
+    }
+
+    // Comment can be an empty string or a valid string
+    if (comment !== undefined && typeof comment !== 'string') {
+        return res.status(400).json({ message: 'Comment must be a string' });
+    }
 
     try {
-        // Validate that the business exists and belongs to the user
+        // Check if business exists
         const business = await Business.findById(businessId);
         if (!business) {
             return res.status(404).json({ message: 'Business not found' });
         }
 
-        // Find the design by designId
-        const tempDesign = await AdBannerDesign.findById(designId);
-        if (!tempDesign) {
+        // Check if design exists
+        const design = await AdBannerDesign.findById(designId);
+        if (!design) {
             return res.status(404).json({ message: 'Design not found' });
         }
 
-        // Here, you can add the logic for editing the design
-        // For example, if you want to add a comment, you can update the design object
-        tempDesign.comment = comment;  // Assuming a comment field is added in the model
+        // Update the comment field (even if it's an empty string)
+        design.comment = comment || ""; // Default to empty string if undefined
 
         // Save the updated design
-        const design = await tempDesign.save();
+        const updatedDesign = await design.save();
 
+        // Return the updated design, including the comment field
         res.status(200).json({
             message: 'Design Update Send',
-            design,
+            design: {
+                _id: updatedDesign._id,
+                fileUrl: updatedDesign.fileUrl,
+                uploadedBy: updatedDesign.uploadedBy,
+                businessId: updatedDesign.businessId,
+                likes: updatedDesign.likes,
+                dislikes: updatedDesign.dislikes,
+                uploadDate: updatedDesign.uploadDate,
+                comment: updatedDesign.comment,  // Include comment in the response
+            },
         });
     } catch (error) {
+        console.error('Error updating design:', error);
         res.status(500).json({ message: error.message });
     }
 }
+
+
+
 
 async function deleteAllCampaigns(req, res) {
     const userId = req.user._id; // Ensure `req.user` has the `_id` property
