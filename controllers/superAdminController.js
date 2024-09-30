@@ -171,17 +171,46 @@ function capitalizeFirstLetter(string) {
 }
 
 // Endpoint to get all management requests
-async function viewManagementrequests(req, res){
+// async function viewManagementrequests(req, res){
+//     try {
+//         const requests = await ManagementRequest.find()
+//             .populate('midAdmin', 'fullname email') // Populate mid admin details
+//             .populate('business'); // Populate business details
+
+//         return res.status(200).json({ requests });
+//     } catch (error) {
+//         return res.status(500).json({ message: error.message });
+//     }
+// };
+
+async function viewManagementrequests(req, res) {
     try {
+        // Fetch all requests and populate the necessary fields
         const requests = await ManagementRequest.find()
             .populate('midAdmin', 'fullname email') // Populate mid admin details
-            .populate('business'); // Populate business details
+            .populate({
+                path: 'business',
+                populate: [
+                    { path: 'owner', select: 'fullname' }, // Populate owner's fullname
+                    { path: 'managedBy', select: 'fullname' }, // Populate managedBy's fullname
+                    { path: 'statusChangedBy', select: 'fullname' }, // Populate statusChangedBy's fullname
+                ]
+            });
 
-        return res.status(200).json({ requests });
+        // Filter out requests where outer status is 'pending', business status is 'accepted', and owner is not null
+        const filteredRequests = requests.filter(request => 
+            request.status === 'pending' &&
+            request.business && 
+            request.business.status === 'accepted' &&
+            request.business.owner // Filter out where owner is null
+        );
+
+        return res.status(200).json({ requests: filteredRequests });
     } catch (error) {
         return res.status(500).json({ message: error.message });
     }
 };
+
 
 // Function to get all users' emails and their subscription plans
 async function getAllUserEmailsAndSubscriptions(req, res) {
