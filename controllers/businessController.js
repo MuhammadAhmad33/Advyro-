@@ -63,19 +63,33 @@ async function addBusiness(req, res) {
     const userId = req.user._id;
 
     try {
+        // Find the user
         const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
+
+        // Check if user has a subscription plan
         if (!user.subscription.plan) {
             return res.status(404).json({ message: 'Get a subscription first!' });
         }
 
-        const allowedBusinessCount = planLimits[user.subscription.plan] || 0;
+        // Perform a case-insensitive search for the subscription plan
+        const subscriptionPlan = await SubscriptionPlan.findOne({ 
+            name: { $regex: new RegExp(`^${user.subscription.plan}$`, 'i') } 
+        });
+
+        if (!subscriptionPlan) {
+            return res.status(404).json({ message: 'Subscription plan not found' });
+        }
+
+        // Get the business limit from the subscription plan
+        const allowedBusinessCount = subscriptionPlan.businessLimit;
         if (user.businesses.length >= allowedBusinessCount) {
             return res.status(400).json({ message: 'Business limit reached for your subscription plan' });
         }
 
+        // Handle file uploads (gallery and logo)
         const gallery = [];
         let logo = '';
 
@@ -83,7 +97,7 @@ async function addBusiness(req, res) {
             for (const file of req.files.gallery) {
                 const url = await uploadToAzureBlob(file.buffer, Date.now() + path.extname(file.originalname));
                 gallery.push(url);
-                console.log(url)
+                console.log(url);
             }
         }
 
@@ -91,22 +105,27 @@ async function addBusiness(req, res) {
             logo = await uploadToAzureBlob(req.files.logo[0].buffer, Date.now() + path.extname(req.files.logo[0].originalname));
         }
 
+        // Create a new business
         const newBusiness = new Business({
             name, phone, location, targetMapArea, description,
             gallery, logo, owner: userId, status: 'pending',
             websiteUrl, facebookUrl, instagramUrl, linkedinUrl, tiktokUrl
         });
 
+        // Save the new business and update the user's business list
         const savedBusiness = await newBusiness.save();
         user.businesses.push(savedBusiness._id);
         await user.save();
-        console.log(savedBusiness)
+        console.log(savedBusiness);
 
+        // Respond with the newly created business
         res.status(201).json({ message: 'Business added successfully', business: savedBusiness });
     } catch (error) {
+        // Handle any errors
         res.status(500).json({ message: error.message });
     }
 }
+
 
 async function getUserBusinesses(req, res) {
     const userId = req.user._id; // Ensure `req.user` has the `_id` property
@@ -185,19 +204,19 @@ const confirmPaymentAndUpdateSubscription = async (req, res) => {
     const { plan } = req.query;
 
     try {
-        // Update user subscription in the database
+        // Find user by ID
         const user = await User.findById(req.user._id);
 
         if (user) {
-            // Make the subscription plan search case-insensitive
+            // Make the subscription plan search case-insensitive to match spelling only
             const subscriptionPlan = await SubscriptionPlan.findOne({ name: { $regex: new RegExp(`^${plan}$`, 'i') } });
 
             if (!subscriptionPlan) {
                 return res.status(404).json({ message: 'Subscription plan not found' });
             }
 
-            // Update user subscription details
-            user.subscription.plan = subscriptionPlan.name; // Use the exact plan name from the database
+            // Update user subscription details using the plan name from the query
+            user.subscription.plan = plan; // Directly use the plan from the query string
             user.subscription.startDate = Date.now();
             user.subscription.expiryDate = new Date(Date.now() + subscriptionPlan.duration * 30 * 24 * 60 * 60 * 1000);
 
@@ -209,7 +228,7 @@ const confirmPaymentAndUpdateSubscription = async (req, res) => {
                     plan: user.subscription.plan,
                     startDate: user.subscription.startDate,
                     expiryDate: user.subscription.expiryDate 
-                } 
+                }
             });
         } else {
             res.status(404).json({ message: 'User not found' });
@@ -218,8 +237,6 @@ const confirmPaymentAndUpdateSubscription = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
-
-
 
 async function retrieveSession(sessionId) {
     try {
