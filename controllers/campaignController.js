@@ -232,30 +232,55 @@ async function cancelCampaign(req, res) {
 }
 
 async function getCampaignsByStatus(req, res) {
-    const userId = req.user._id; // Ensure `req.user` has the `_id` property
-    const now = new Date();
+    const userId = req.user._id; // User ID from request (Ensure `req.user` has the `_id` property)
+    const { status } = req.params; // The status parameter (e.g., 'pending', 'approved', 'rejected')
 
     try {
-        // Find previous pending campaigns
-        const previousPendingCampaigns = await Campaign.find({
-            owner: userId,
-            status: 'pending',
-            'dateSchedule.endDate': { $lt: now }
+        // Step 1: Find all businesses where the user is the owner
+        const businesses = await Business.find({ owner: userId });
+
+        if (businesses.length === 0) {
+            return res.status(404).json({ message: 'No businesses found for the user' });
+        }
+
+        // Step 2: Extract business IDs
+        const businessIds = businesses.map(business => business._id);
+
+        // Step 3: Find all campaigns where the business belongs to the user and the status matches
+        const campaigns = await Campaign.find({ business: { $in: businessIds }, status })
+            .populate({
+                path: 'business',
+                select: 'name location owner',
+                populate: {
+                    path: 'owner',
+                    select: 'fullname email',
+                },
+            });
+
+        // Step 4: Filter out invalid campaigns where business or required fields are missing
+        const filteredCampaigns = campaigns.filter(campaign => {
+            const business = campaign.business;
+            return (
+                business && 
+                business._id && 
+                business.name && 
+                business.location && 
+                business.owner && 
+                business.owner._id && 
+                business.owner.fullname && 
+                business.owner.email
+            );
         });
 
-        // Find current active campaigns
-        const currentActiveCampaigns = await Campaign.find({
-            owner: userId,
-            status: 'active',
-            'dateSchedule.startDate': { $lte: now },
-            'dateSchedule.endDate': { $gte: now }
-        });
+        // If no valid campaigns found
+        if (filteredCampaigns.length === 0) {
+            return res.status(404).json({ message: 'No valid campaigns found for the given status' });
+        }
 
-        res.status(200).json({
-            previousPendingCampaigns,
-            currentActiveCampaigns
-        });
+        // Return the filtered campaigns
+        res.status(200).json({ campaigns: filteredCampaigns });
     } catch (error) {
+        // Handle any errors that occur during the query
         res.status(500).json({ message: error.message });
     }
 }
@@ -286,7 +311,6 @@ async function getAllDesigns(req, res) {
         res.status(500).json({ message: error.message });
     }
 }
-
 
 // Edit Design with Comment API
 async function editDesign(req, res) {

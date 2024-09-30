@@ -75,7 +75,7 @@ exports.getWalletAndWithdrawalInfo = async (req, res) => {
 
     if (!chat) {
       return res.status(200).json({
-        balance: wallet.balance,
+        balance: parseFloat(wallet.balance), // Ensure balance is a double
         withdrawals: {
           approved: [],
           pending: [],
@@ -101,7 +101,7 @@ exports.getWalletAndWithdrawalInfo = async (req, res) => {
 
     // Step 4: Return the balance and withdrawals
     return res.status(200).json({
-      balance: wallet.balance,
+      balance: parseFloat(wallet.balance), // Ensure balance is a double
       withdrawals: {
         approved: approvedWithdrawals,
         pending: pendingWithdrawals,
@@ -111,3 +111,4 @@ exports.getWalletAndWithdrawalInfo = async (req, res) => {
     return res.status(500).json({ message: 'Server error', error });
   }
 };
+

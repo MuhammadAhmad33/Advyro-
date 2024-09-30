@@ -185,37 +185,40 @@ const confirmPaymentAndUpdateSubscription = async (req, res) => {
     const { plan } = req.query;
 
     try {
-            // Update user subscription in the database
-            const user = await User.findById(req.user._id);
+        // Update user subscription in the database
+        const user = await User.findById(req.user._id);
 
-            if (user) {
-                const subscriptionPlan = await SubscriptionPlan.findOne({ name: plan });
-                
-                if (!subscriptionPlan) {
-                    return res.status(404).json({ message: 'Subscription plan not found' });
-                }
+        if (user) {
+            // Make the subscription plan search case-insensitive
+            const subscriptionPlan = await SubscriptionPlan.findOne({ name: { $regex: new RegExp(`^${plan}$`, 'i') } });
 
-                user.subscription.plan = plan;
-                user.subscription.startDate = Date.now();
-                user.subscription.expiryDate = new Date(Date.now() + subscriptionPlan.duration * 30 * 24 * 60 * 60 * 1000);
-                
-                await user.save();
-
-                res.status(200).json({ 
-                    message: 'Subscription plan updated successfully', 
-                    subscription: {
-                        plan: user.subscription.plan,
-                        startDate: user.subscription.startDate,
-                        expiryDate: user.subscription.expiryDate 
-                    } 
-                });
-            } else {
-                res.status(404).json({ message: 'User not found' });
+            if (!subscriptionPlan) {
+                return res.status(404).json({ message: 'Subscription plan not found' });
             }
+
+            // Update user subscription details
+            user.subscription.plan = subscriptionPlan.name; // Use the exact plan name from the database
+            user.subscription.startDate = Date.now();
+            user.subscription.expiryDate = new Date(Date.now() + subscriptionPlan.duration * 30 * 24 * 60 * 60 * 1000);
+
+            await user.save();
+
+            res.status(200).json({ 
+                message: 'Subscription plan updated successfully', 
+                subscription: {
+                    plan: user.subscription.plan,
+                    startDate: user.subscription.startDate,
+                    expiryDate: user.subscription.expiryDate 
+                } 
+            });
+        } else {
+            res.status(404).json({ message: 'User not found' });
+        }
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 };
+
 
 
 async function retrieveSession(sessionId) {
