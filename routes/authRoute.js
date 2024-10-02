@@ -70,6 +70,8 @@ router.post('/send-notification',auth,authController.sendNotification),
 // Route to upload profile picture
 router.post('/profile-pic', auth, authController.uploadProfilePic);
 
+router.get('/getFCMTokens', authController.getMidAdminFcmTokens);
+
 // Route to get user by ID
 router.get('/:id', authController.getUserById);
 

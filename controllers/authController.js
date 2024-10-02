@@ -390,7 +390,41 @@ async function deleteUser (req, res){
     }
 };
 
+// Function to get the list of FCM tokens for mid admins
+async function getMidAdminFcmTokens(req, res) {
+    try {
+        // Query the database to find users with role 'mid admin' and valid FCM tokens
+        const users = await User.find({
+            role: 'mid admin',
+            fcmToken: { $ne: null, $ne: "" }  // FCM token should not be null or an empty string
+        }, 'fcmToken');  // Only return the fcmToken field
 
+        // Extract the FCM tokens from the users, filtering out null and empty tokens
+        const fcmTokens = users
+            .map(user => user.fcmToken)
+            .filter(token => token);  // This filters out null, undefined, and empty strings
+
+        // If no tokens are found, return a specific message
+        if (!fcmTokens.length) {
+            return res.status(404).json({
+                message: 'No valid Mid Admin FCM tokens found for mid admins',
+                tokens: []
+            });
+        }
+
+        // Return the tokens in the response
+        res.status(200).json({
+            message: 'Mid Admin FCM tokens retrieved successfully',
+            tokens: fcmTokens
+        });
+    } catch (error) {
+        // Return the error in the response
+        res.status(500).json({
+            message: 'An error occurred while fetching FCM tokens',
+            error: error.message
+        });
+    }
+}
 
   
 module.exports = {
@@ -404,5 +438,6 @@ module.exports = {
     getUserById,
     editProfile,
     uploadProfilePic:[upload,uploadProfilePic],
-    deleteUser
+    deleteUser,
+    getMidAdminFcmTokens
 };
