@@ -234,8 +234,8 @@ async function getAllUserEmailsAndSubscriptions(req, res) {
 // Function to get all mid admins
 async function getAllMidAdmins(req, res) {
     try {
-        // Find all users with the role of 'mid admin'
-        const midAdmins = await User.find({ role: 'mid admin' }).select('fullname'); // Select specific fields
+        // Find all users with the role of 'mid admin' and select specific fields (fullname and permissions)
+        const midAdmins = await User.find({ role: 'mid admin' }).select('fullname permissions'); 
 
         return res.status(200).json(midAdmins);
     } catch (error) {
@@ -243,6 +243,7 @@ async function getAllMidAdmins(req, res) {
         return res.status(500).json({ message: 'Error fetching mid admins', error: error.message });
     }
 };
+
 // Endpoint to generate a 6-digit signup code for mid admins
 async function generateCode(req, res) {
     try {
