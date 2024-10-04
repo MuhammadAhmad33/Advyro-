@@ -228,12 +228,15 @@ const confirmPaymentAndUpdateSubscription = async (req, res) => {
                     }
                 }
 
-                // If upgrading or extending, add to the expiry date
-                if (currentDate < currentExpiry) {
-                    user.subscription.expiryDate = new Date(currentExpiry + subscriptionPlan.duration * 30 * 24 * 60 * 60 * 1000);
+                // If upgrading to a new plan (not the same as current plan)
+                if (subscriptionPlan.name.toLowerCase() !== currentPlan.name.toLowerCase()) {
+                    // Reset the expiry date to current time with new plan's duration
+                    user.subscription.expiryDate = new Date(Date.now() + subscriptionPlan.duration * 30 * 24 * 60 * 60 * 1000);
                 } else {
-                    user.subscription.expiryDate = new Date(currentDate + subscriptionPlan.duration * 30 * 24 * 60 * 60 * 1000);
+                    // If same plan is purchased, extend the expiry date
+                    user.subscription.expiryDate = new Date(currentExpiry + subscriptionPlan.duration * 30 * 24 * 60 * 60 * 1000);
                 }
+
             } else {
                 // First-time subscription
                 user.subscription.plan = plan;
@@ -263,6 +266,7 @@ const confirmPaymentAndUpdateSubscription = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
 
 async function retrieveSession(sessionId) {
     try {
