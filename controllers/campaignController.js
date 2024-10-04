@@ -294,9 +294,11 @@ async function getAllDesigns(req, res) {
             .populate('dislikes', 'fullname email') // Populate user details for dislikes
             .lean();
 
-        // Format each design with user details, counts for likes and dislikes,
-        // and set business to an empty string if it's null
-        const designsWithCounts = designs.map(design => ({
+        // Filter out designs where 'uploadedBy' is null or undefined
+        const filteredDesigns = designs.filter(design => design.uploadedBy !== null && design.uploadedBy !== undefined);
+
+        // Format each design with user details, counts for likes and dislikes
+        const designsWithCounts = filteredDesigns.map(design => ({
             ...design,
             comment: design.comment || "", // Include the comment field, default to empty string if undefined
             businessId: design.businessId ? design.businessId : "", // Set business to an empty string if null

@@ -40,5 +40,4 @@ router.post('/upload-design', auth, midAdminController.uploadDesign);
 router.post('/requestManagement',auth,midAdminController.requestBusinessManagement);
 router.post('/campaigns/:campaignId/analytics', auth, midAdminController.addAnalyticsData);
 
-
 module.exports = router;

@@ -208,26 +208,52 @@ const confirmPaymentAndUpdateSubscription = async (req, res) => {
         const user = await User.findById(req.user._id);
 
         if (user) {
-            // Make the subscription plan search case-insensitive to match spelling only
+            // Find the subscription plan (case-insensitive)
             const subscriptionPlan = await SubscriptionPlan.findOne({ name: { $regex: new RegExp(`^${plan}$`, 'i') } });
 
             if (!subscriptionPlan) {
                 return res.status(404).json({ message: 'Subscription plan not found' });
             }
 
-            // Update user subscription details using the plan name from the query
-            user.subscription.plan = plan; // Directly use the plan from the query string
-            user.subscription.startDate = Date.now();
-            user.subscription.expiryDate = new Date(Date.now() + subscriptionPlan.duration * 30 * 24 * 60 * 60 * 1000);
+            // Check if user already has an active subscription
+            if (user.subscription.plan) {
+                const currentPlan = await SubscriptionPlan.findOne({ name: user.subscription.plan });
+                const currentDate = Date.now();
+                const currentExpiry = new Date(user.subscription.expiryDate).getTime();
+
+                // Prevent downgrading if user tries to select a plan with a lower businessLimit
+                if (subscriptionPlan.businessLimit < currentPlan.businessLimit) {
+                    if (currentDate < currentExpiry) {
+                        return res.status(400).json({ message: 'You cannot downgrade your plan until the current plan expires.' });
+                    }
+                }
+
+                // If upgrading or extending, add to the expiry date
+                if (currentDate < currentExpiry) {
+                    user.subscription.expiryDate = new Date(currentExpiry + subscriptionPlan.duration * 30 * 24 * 60 * 60 * 1000);
+                } else {
+                    user.subscription.expiryDate = new Date(currentDate + subscriptionPlan.duration * 30 * 24 * 60 * 60 * 1000);
+                }
+            } else {
+                // First-time subscription
+                user.subscription.plan = plan;
+                user.subscription.startDate = Date.now();
+                user.subscription.expiryDate = new Date(Date.now() + subscriptionPlan.duration * 30 * 24 * 60 * 60 * 1000);
+            }
+
+            // Update the user's business limit if upgrading
+            if (subscriptionPlan.businessLimit > currentPlan?.businessLimit) {
+                user.subscription.businessLimit = subscriptionPlan.businessLimit;
+            }
 
             await user.save();
 
-            res.status(200).json({ 
-                message: 'Subscription plan updated successfully', 
+            res.status(200).json({
+                message: 'Subscription plan updated successfully',
                 subscription: {
                     plan: user.subscription.plan,
                     startDate: user.subscription.startDate,
-                    expiryDate: user.subscription.expiryDate 
+                    expiryDate: user.subscription.expiryDate
                 }
             });
         } else {
