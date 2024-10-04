@@ -36,7 +36,7 @@ const UserSchema = new mongoose.Schema({
         plan: {
             type: String,
             enum: ['basic', 'standard', 'pro'],
-            default: 'basic'
+            default: null
         },
         startDate: {
             type: Date,
