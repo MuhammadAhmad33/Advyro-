@@ -222,7 +222,7 @@ const confirmPaymentAndUpdateSubscription = async (req, res) => {
             if (user.subscription.plan) {
                 console.log('User already has an active subscription:', user.subscription.plan);
 
-                const currentPlan = await SubscriptionPlan.findOne({ name: user.subscription.plan });
+                const currentPlan = await SubscriptionPlan.findOne({ name: { $regex: new RegExp(`^${user.subscription.plan}$`, 'i') } });
                 console.log('Current subscription plan details:', currentPlan);
 
                 const currentDate = Date.now();
