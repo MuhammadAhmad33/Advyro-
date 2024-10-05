@@ -37,7 +37,6 @@ const planLimits = {
     pro: 10,
 };
 
-
 async function uploadToAzureBlob(fileBuffer, fileName) {
     const blockBlobClient = containerClient.getBlockBlobClient(fileName);
     await blockBlobClient.uploadData(fileBuffer);
@@ -52,8 +51,6 @@ async function deleteFromAzureBlob(fileName) {
     await blockBlobClient.delete();
     return;
 }
-
-
 
 async function addBusiness(req, res) {
     const { 
@@ -125,7 +122,6 @@ async function addBusiness(req, res) {
         res.status(500).json({ message: error.message });
     }
 }
-
 
 async function getUserBusinesses(req, res) {
     const userId = req.user._id; // Ensure `req.user` has the `_id` property
@@ -202,55 +198,74 @@ const selectSubscriptionPlan = async (req, res) => {
 
 const confirmPaymentAndUpdateSubscription = async (req, res) => {
     const { plan } = req.query;
+    console.log('Received request to confirm payment and update subscription for plan:', plan);
 
     try {
         // Find user by ID
+        console.log('Finding user by ID:', req.user._id);
         const user = await User.findById(req.user._id);
 
         if (user) {
+            console.log('User found:', user);
+
             // Find the subscription plan (case-insensitive)
+            console.log('Finding subscription plan by name (case-insensitive):', plan);
             const subscriptionPlan = await SubscriptionPlan.findOne({ name: { $regex: new RegExp(`^${plan}$`, 'i') } });
 
             if (!subscriptionPlan) {
+                console.log('Subscription plan not found:', plan);
                 return res.status(404).json({ message: 'Subscription plan not found' });
             }
+            console.log('Subscription plan found:', subscriptionPlan);
 
             // Check if user already has an active subscription
             if (user.subscription.plan) {
+                console.log('User already has an active subscription:', user.subscription.plan);
+
                 const currentPlan = await SubscriptionPlan.findOne({ name: user.subscription.plan });
+                console.log('Current subscription plan details:', currentPlan);
+
                 const currentDate = Date.now();
                 const currentExpiry = new Date(user.subscription.expiryDate).getTime();
+                console.log('Current date:', currentDate);
+                console.log('Current plan expiry date:', currentExpiry);
 
                 // Prevent downgrading if user tries to select a plan with a lower businessLimit
                 if (subscriptionPlan.businessLimit < currentPlan.businessLimit) {
                     if (currentDate < currentExpiry) {
+                        console.log('Attempted to downgrade to a plan with a lower business limit before expiry.');
                         return res.status(400).json({ message: 'You cannot downgrade your plan until the current plan expires.' });
                     }
                 }
 
                 // If upgrading to a new plan (not the same as current plan)
                 if (subscriptionPlan.name.toLowerCase() !== currentPlan.name.toLowerCase()) {
-                    // Reset the expiry date to current time with new plan's duration
+                    console.log('Upgrading to a new plan. Resetting expiry date with new plan duration.');
                     user.subscription.expiryDate = new Date(Date.now() + subscriptionPlan.duration * 30 * 24 * 60 * 60 * 1000);
+
+                    // Update the user's business limit if upgrading
+                    if (subscriptionPlan.businessLimit > currentPlan?.businessLimit) {
+                        console.log('Upgrading business limit to:', subscriptionPlan.businessLimit);
+                        user.subscription.businessLimit = subscriptionPlan.businessLimit;
+                    }
                 } else {
                     // If same plan is purchased, extend the expiry date
+                    console.log('Renewing the same plan. Extending expiry date.');
                     user.subscription.expiryDate = new Date(currentExpiry + subscriptionPlan.duration * 30 * 24 * 60 * 60 * 1000);
                 }
 
             } else {
                 // First-time subscription
+                console.log('First-time subscription. Setting plan, start date, and expiry date.');
                 user.subscription.plan = plan;
                 user.subscription.startDate = Date.now();
                 user.subscription.expiryDate = new Date(Date.now() + subscriptionPlan.duration * 30 * 24 * 60 * 60 * 1000);
             }
 
-            // Update the user's business limit if upgrading
-            if (subscriptionPlan.businessLimit > currentPlan?.businessLimit) {
-                user.subscription.businessLimit = subscriptionPlan.businessLimit;
-            }
-
+            console.log('Saving updated user subscription information.');
             await user.save();
 
+            console.log('Subscription updated successfully.');
             res.status(200).json({
                 message: 'Subscription plan updated successfully',
                 subscription: {
@@ -260,9 +275,11 @@ const confirmPaymentAndUpdateSubscription = async (req, res) => {
                 }
             });
         } else {
+            console.log('User not found.');
             res.status(404).json({ message: 'User not found' });
         }
     } catch (error) {
+        console.log('Error occurred:', error.message);
         res.status(500).json({ message: error.message });
     }
 };
@@ -362,7 +379,6 @@ async function editBusiness(req, res) {
         res.status(500).json({ message: error.message });
     }
 }
-
 
 async function deleteBusiness(req, res) {
     const { businessId } = req.params; // Get the business ID from the request parameters
