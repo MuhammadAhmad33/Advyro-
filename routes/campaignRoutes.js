@@ -12,7 +12,7 @@ router.post('/pay-fee', auth, campaignController.payCampaignFee);
 
 router.post('/cancel', auth, campaignController.cancelCampaign);
 
-router.get('/allDesigns',campaignController.getAllDesigns);
+router.get('/allDesigns/:businessId', campaignController.getAllDesigns);
 
 router.post('/editDesign', campaignController.editDesign);
 

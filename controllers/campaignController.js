@@ -287,6 +287,9 @@ async function getCampaignsByStatus(req, res) {
 
 async function getAllDesigns(req, res) {
     try {
+        // Get businessId from the request parameters or query
+        const { businessId } = req.params; // Extract businessId from route parameters
+
         // Retrieve all design records from the database
         const designs = await AdBannerDesign.find()
             .populate('uploadedBy', 'fullname email') // Populate the uploader's details
@@ -308,7 +311,12 @@ async function getAllDesigns(req, res) {
             dislikedByUsers: design.dislikes ? design.dislikes.map(user => ({ fullname: user.fullname, email: user.email })) : [],
         }));
 
-        res.status(200).json({ designs: designsWithCounts });
+        // Filter designs based on the provided businessId
+        const resultDesigns = designsWithCounts.filter(design => 
+            businessId === "" || design.businessId === businessId
+        );
+
+        res.status(200).json({ designs: resultDesigns });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
