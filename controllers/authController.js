@@ -85,6 +85,61 @@ async function registerUser(req, res) {
     }
 }
 
+async function midAdminSignup(req, res) {
+    const { fullname, email, phoneNumber, password, confirmPassword, Code } = req.body;
+
+    try {
+        const otp = generateOTP();
+        console.log(otp);
+        storeOTP(email, otp);
+
+        const subject = 'Registration Confirmation';
+        const confirmationMessage = `
+        Hi ${fullname}!
+        Thank you for signing up for our platform!
+        \nYour OTP code is: ${otp}
+        \nBest regards,\nAdvyro`;
+
+        if (password !== confirmPassword) {
+            return res.status(400).json({ message: 'Passwords do not match' });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Log the received admin code for debugging
+        console.log('Received admin code:', Code);
+
+        // Check if the provided admin code exists in the database
+        const code = await AdminCode.findOne({ code: Code }); // Use findOne to check for a single document
+        console.log('Retrieved code from DB:', code); // Log the retrieved code
+
+        // If the code is not found, return an error
+        if (!code) {
+            return res.status(400).json({ message: 'Invalid admin code' });
+        }
+
+        // Create the mid admin user
+        const midAdmin = new User({
+            fullname,
+            email,
+            phoneNumber,
+            password: hashedPassword,
+            confirmPassword: hashedPassword,
+            role: 'mid admin',
+        });
+
+        await sendEmail(email, subject, confirmationMessage);
+        await midAdmin.save();
+
+        // Delete the used admin code
+        await AdminCode.deleteOne({ _id: code._id }); // Remove the code after use
+
+        return res.status(201).json({ message: 'Mid admin created successfully', profilePic: midAdmin.profilePic });
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+}
+
 async function loginUser(req, res) {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -176,58 +231,6 @@ async function resetPassword(req, res) {
     }
 }
 
-async function midAdminSignup(req, res) {
-    const { fullname, email, phoneNumber, password, confirmPassword, Code } = req.body;
-
-    try {
-
-        const otp = generateOTP();
-        console.log(otp);
-        storeOTP(email, otp);
-
-        const subject = 'Registration Confirmation';
-        const confirmationMessage = `
-        Hi ${fullname}!
-        Thank you for signing up for our platform!
-        \nYour OTP code is: ${otp}
-        \nBest regards,\nAdvyro`;
-
-        if (password !== confirmPassword) {
-            return res.status(400).json({ message: 'Passwords do not match' });
-        }
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        // Log the received admin code for debugging
-        console.log('Received admin code:', Code);
-
-        // Check if the provided admin code exists in the database
-        const code = await AdminCode.findOne({ code: Code}); // Use findOne to check for a single document
-        console.log('Retrieved code from DB:', code); // Log the retrieved code
-
-        // If the code is not found, return an error
-        if (!code) {
-            return res.status(400).json({ message: 'Invalid admin code' });
-        }
-
-        // Create the mid admin user
-        const midAdmin = new User({
-            fullname,
-            email,
-            phoneNumber,
-            password:hashedPassword,
-            confirmPassword:hashedPassword,
-            role: 'mid admin',
-        });
-
-        await sendEmail(email, subject, confirmationMessage);
-        await midAdmin.save();
-
-        return res.status(201).json({ message: 'Mid admin created successfully', midAdmin });
-    } catch (error) {
-        return res.status(500).json({ message: error.message });
-    }
-};
 async function sendNotification(req, res) {
     const { title, body, fcmToken } = req.body;
 
