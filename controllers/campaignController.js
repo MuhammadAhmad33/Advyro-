@@ -373,8 +373,38 @@ async function editDesign(req, res) {
     }
 }
 
+async function deleteInvalidAdBannerDesigns(req, res) {
 
+    try {
 
+        // Get all AdBannerDesigns
+        const designs = await AdBannerDesign.find();
+
+        // Filter designs where businessId is an empty string
+        const designsToDelete = designs.filter(design => 
+            design.businessId === "" || !design.businessId
+        );
+
+        // If no designs to delete, return a message
+        if (designsToDelete.length === 0) {
+            return res.status(200).json({ message: 'No invalid Ad Banner Designs found to delete.' });
+        }
+
+        // Extract the IDs of the designs to delete
+        const idsToDelete = designsToDelete.map(design => design._id);
+
+        // Delete the AdBannerDesign documents
+        const result = await AdBannerDesign.deleteMany({
+            _id: { $in: idsToDelete }
+        });
+
+        res.status(200).json({
+            message: `${result.deletedCount} invalid Ad Banner Designs deleted successfully.`,
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+}
 
 async function deleteAllCampaigns(req, res) {
     const userId = req.user._id; // Ensure `req.user` has the `_id` property
@@ -391,6 +421,24 @@ async function deleteAllCampaigns(req, res) {
 
         res.status(200).json({
             message: `${result.deletedCount} campaigns deleted successfully.`,
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+}
+
+async function deleteInvalidCampaigns(req, res) {
+    try {
+        // Delete campaigns where the 'business' field is null or an empty string
+        const result = await Campaign.deleteMany({
+            $or: [
+                { business: null }, // Business is null
+                { business: "" }    // Business is an empty string
+            ]
+        });
+
+        res.status(200).json({
+            message: `${result.deletedCount} invalid campaigns deleted successfully.`,
         });
     } catch (error) {
         res.status(500).json({ message: error.message });

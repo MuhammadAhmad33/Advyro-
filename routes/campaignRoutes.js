@@ -28,4 +28,6 @@ router.get('/business/:businessId',auth,campaignController.getCampaigns);
 
 router.delete('/delAllCamp',auth,campaignController.deleteAllCampaigns)
 
+// router.delete('/deleteInvalidAdBannerDesigns',campaignController.deleteInvalidAdBannerDesigns)
+
 module.exports = router;

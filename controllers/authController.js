@@ -150,30 +150,32 @@ async function resetPassword(req, res) {
         return res.status(400).json({ errors: errors.array() });
     }
 
-    const userId = req.user._id;
+    const userId = req.params.userId; // Get userId from request parameters
     const { newPassword, confirmPassword } = req.body;
 
     try {
+        // Check if the new passwords match
         if (newPassword !== confirmPassword) {
             return res.status(400).json({ message: 'Passwords do not match' });
         }
-        const user = await User.findById(userId);
 
+        // Find the user by ID
+        const user = await User.findById(userId);
         if (!user) {
-            return res.status(400).json({ message: 'Password reset token is invalid or has expired' });
+            return res.status(404).json({ message: 'User not found' });
         }
-        console.log(user.password);
+
+        // Hash the new password
         const hashedPassword = await bcrypt.hash(newPassword, 10);
-        user.password = hashedPassword;
-        user.confirmPassword = hashedPassword;
-        console.log(user.password);
-        await user.save();
+        user.password = hashedPassword; // Update user's password
+        await user.save(); // Save the updated user document
 
         res.status(200).json({ message: 'Password reset successfully' });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 }
+
 async function midAdminSignup(req, res) {
     const { fullname, email, phoneNumber, password, confirmPassword, Code } = req.body;
 
