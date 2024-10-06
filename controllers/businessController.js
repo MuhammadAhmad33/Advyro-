@@ -242,6 +242,7 @@ const confirmPaymentAndUpdateSubscription = async (req, res) => {
                 if (subscriptionPlan.name.toLowerCase() !== currentPlan.name.toLowerCase()) {
                     console.log('Upgrading to a new plan. Resetting expiry date with new plan duration.');
                     user.subscription.expiryDate = new Date(Date.now() + subscriptionPlan.duration * 30 * 24 * 60 * 60 * 1000);
+                    user.subscription.name = subscriptionPlan.name;
 
                     // Update the user's business limit if upgrading
                     if (subscriptionPlan.businessLimit > currentPlan?.businessLimit) {
