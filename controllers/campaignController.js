@@ -503,6 +503,7 @@ async function dislikeDesign(req, res) {
 
 const getAdvyroSettings = (req, res) => {
     const settings = {
+        advyro_social_pages: process.env.ADVYRO_SOCIAL_MEDIA_PAGES === 'true',
         google: process.env.ADVYRO_GOOGLE === 'true',
         tiktok: process.env.ADVYRO_TIKTOK === 'true',
         facebook: process.env.ADVYRO_FACEBOOK === 'true',
