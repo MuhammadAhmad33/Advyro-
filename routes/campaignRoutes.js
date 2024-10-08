@@ -30,4 +30,6 @@ router.delete('/delAllCamp',auth,campaignController.deleteAllCampaigns)
 
 // router.delete('/deleteInvalidAdBannerDesigns',campaignController.deleteInvalidAdBannerDesigns)
 
+router.get('/campaignRules', campaignController.getAdvyroSettings);
+
 module.exports = router;

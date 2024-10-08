@@ -501,6 +501,21 @@ async function dislikeDesign(req, res) {
     }
 }
 
+const getAdvyroSettings = (req, res) => {
+    const settings = {
+        google: process.env.ADVYRO_GOOGLE === 'true',
+        tiktok: process.env.ADVYRO_TIKTOK === 'true',
+        facebook: process.env.ADVYRO_FACEBOOK === 'true',
+        instagram: process.env.ADVYRO_INSTAGRAM === 'true',
+        youtube: process.env.ADVYRO_YOUTUBE === 'true',
+        socialFee: parseFloat(process.env.ADVYRO_SOCIAL_FEE),
+        dayFee: parseFloat(process.env.ADVYRO_DAY_FEE),
+        hourFee: parseFloat(process.env.ADVYRO_HOUR_FEE),
+    };
+
+    res.status(200).json(settings);
+};
+
 module.exports = {
     createCampaign: [upload, createCampaign],
     getCampaigns,
@@ -512,5 +527,6 @@ module.exports = {
     deleteAllCampaigns,
     likeDesign,
     dislikeDesign,
-    editDesign
+    editDesign,
+    getAdvyroSettings
 };
