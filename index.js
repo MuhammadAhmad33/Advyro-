@@ -42,13 +42,7 @@ mongoose.connect(config.mongoURI, { useNewUrlParser: true, useUnifiedTopology: t
     .catch(err => console.error('MongoDB connection error:', err));
 
 // Start the server
-const PORT = 5566;
-
-// app.listen(PORT, () => {
-//     console.log(`Server is running on port ${PORT}`);
-// });
-
-// Bind the server to 0.0.0.0
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server is running on http://0.0.0.0:${PORT}`);
+const PORT = process.env.PORT || 7002;
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
 });
