@@ -512,6 +512,14 @@ const getAdvyroSettings = (req, res) => {
         socialFee: parseFloat(process.env.ADVYRO_SOCIAL_FEE),
         dayFee: parseFloat(process.env.ADVYRO_DAY_FEE),
         hourFee: parseFloat(process.env.ADVYRO_HOUR_FEE),
+        
+        // New settings
+        advyro_google_fee: parseFloat(process.env.ADVYRO_GOOGLE_FEE),
+        advyro_social_media_pages_fee: parseFloat(process.env.ADVYRO_SOCIAL_MEDIA_PAGES_FEE),
+        advyro_tiktok_fee: parseFloat(process.env.ADVYRO_TIKTOK_FEE),
+        advyro_facebook_fee: parseFloat(process.env.ADVYRO_FACEBOOK_FEE),
+        advyro_instagram_fee: parseFloat(process.env.ADVYRO_INSTAGRAM_FEE),
+        advyro_youtube_fee: parseFloat(process.env.ADVYRO_YOUTUBE_FEE),
     };
 
     res.status(200).json(settings);
