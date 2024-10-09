@@ -38,3 +38,4 @@ fetchStripeSecretKey().then(stripeKey => {
 
 // Export the config
 module.exports = config;
+
