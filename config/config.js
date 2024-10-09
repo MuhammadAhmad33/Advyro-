@@ -23,7 +23,7 @@ async function fetchStripeSecretKey() {
 
 // Initialize configuration object
 const config = {
-    mongoURI: 'mongodb+srv://Sleek:1Hmi6EHEptDrvFdU@cluster0.v6ci4ot.mongodb.net/',
+    mongoURI: 'mongodb+srv://officialshafiqahmad:BVdMnHpBZOTCX4H6@advyrocluster.pmrql.mongodb.net/?retryWrites=true&w=majority&appName=AdvyroCluster/',
     JWT_SECRET: 'Advyro',
     resendApiKey: 're_KXbbyurt_6evMKBFkGNgMaWwCYpQk2qnN',
     STRIPE_SECRET_KEY: "sk_test_51PWFAtRsuZrhcR6RkARSyeTININjrF9jCGyX578O6uoZJBjtuTYwcIfjGarejovYy4O1ONuLhiiZksJpcRU5BUzE0063W9ijCB",
