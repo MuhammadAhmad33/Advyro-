@@ -289,16 +289,20 @@ async function getAllDesigns(req, res) {
     try {
         // Get businessId from the request parameters or query
         const { businessId } = req.params; // Extract businessId from route parameters
-
+        console.log(`Received businessId: ${businessId}`);  // Debug log for businessId
+        
         // Retrieve all design records from the database
+        console.log('Fetching designs from database...');
         const designs = await AdBannerDesign.find()
             .populate('uploadedBy', 'fullname email') // Populate the uploader's details
             .populate('likes', 'fullname email') // Populate user details for likes
             .populate('dislikes', 'fullname email') // Populate user details for dislikes
             .lean();
+        console.log(`Fetched ${designs.length} designs from the database`);  // Debug log for designs count
 
         // Filter out designs where 'uploadedBy' is null or undefined
         const filteredDesigns = designs.filter(design => design.uploadedBy !== null && design.uploadedBy !== undefined);
+        console.log(`Filtered designs with valid uploadedBy: ${filteredDesigns.length}`);  // Debug log for valid designs
 
         // Format each design with user details, counts for likes and dislikes
         const designsWithCounts = filteredDesigns.map(design => ({
@@ -310,17 +314,21 @@ async function getAllDesigns(req, res) {
             likedByUsers: design.likes ? design.likes.map(user => ({ fullname: user.fullname, email: user.email })) : [],
             dislikedByUsers: design.dislikes ? design.dislikes.map(user => ({ fullname: user.fullname, email: user.email })) : [],
         }));
+        console.log('Formatted designs with counts and user details');  // Debug log for formatting step
 
         // Filter designs based on the provided businessId
-        const resultDesigns = designsWithCounts.filter(design => 
-            businessId === "" || design.businessId === businessId
+        const resultDesigns = designsWithCounts.filter(design =>
+            design.businessId === "" || design.businessId === businessId
         );
+        console.log(`Filtered designs based on businessId: ${resultDesigns.length}`);  // Debug log for result designs count
 
         res.status(200).json({ designs: resultDesigns });
     } catch (error) {
+        console.error(`Error fetching designs: ${error.message}`);  // Debug log for any error
         res.status(500).json({ message: error.message });
     }
 }
+
 
 // Edit Design with Comment API
 async function editDesign(req, res) {

@@ -20,7 +20,7 @@ const AdBannerDesignSchema = new mongoose.Schema({
         default: ""
     },
     businessId: {
-        type: mongoose.Schema.Types.ObjectId,
+        type: String,
         ref: 'Business', // Reference to the associated business
         required: false, // Ensure it's required
     },
