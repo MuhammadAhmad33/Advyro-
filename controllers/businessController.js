@@ -201,90 +201,58 @@ const confirmPaymentAndUpdateSubscription = async (req, res) => {
     console.log('Received request to confirm payment and update subscription for plan:', plan);
 
     try {
-        // Find user by ID
-        console.log('Finding user by ID:', req.user._id);
+        // Find the user by ID
         const user = await User.findById(req.user._id);
+        if (!user) return res.status(404).json({ message: 'User not found' }); // User not found
 
-        if (user) {
-            console.log('User found:', user);
+        // Find the subscription plan (case-insensitive)
+        const subscriptionPlan = await SubscriptionPlan.findOne({ name: { $regex: new RegExp(`^${plan}$`, 'i') } });
+        if (!subscriptionPlan) return res.status(404).json({ message: 'Subscription plan not found' }); // Subscription plan not found
 
-            // Find the subscription plan (case-insensitive)
-            console.log('Finding subscription plan by name (case-insensitive):', plan);
-            const subscriptionPlan = await SubscriptionPlan.findOne({ name: { $regex: new RegExp(`^${plan}$`, 'i') } });
+        // Get current subscription plan if it exists
+        const currentPlan = user.subscription.plan ? await SubscriptionPlan.findOne({ name: { $regex: new RegExp(`^${user.subscription.plan}$`, 'i') } }) : null;
+        const currentDate = Date.now(); // Get current date
+        const currentExpiry = currentPlan ? new Date(user.subscription.expiryDate).getTime() : 0; // Get expiry date of current plan
 
-            if (!subscriptionPlan) {
-                console.log('Subscription plan not found:', plan);
-                return res.status(404).json({ message: 'Subscription plan not found' });
+        // Check if the user already has an active subscription
+        if (currentPlan) {
+            // Prevent downgrading if trying to select a plan with a lower business limit before current plan expiry
+            if (subscriptionPlan.businessLimit < currentPlan.businessLimit && currentDate < currentExpiry) {
+                return res.status(400).json({ message: 'You cannot downgrade your plan until the current plan expires.' });
             }
-            console.log('Subscription plan found:', subscriptionPlan);
 
-            // Check if user already has an active subscription
-            if (user.subscription.plan) {
-                console.log('User already has an active subscription:', user.subscription.plan);
-
-                const currentPlan = await SubscriptionPlan.findOne({ name: { $regex: new RegExp(`^${user.subscription.plan}$`, 'i') } });
-                console.log('Current subscription plan details:', currentPlan);
-
-                const currentDate = Date.now();
-                const currentExpiry = new Date(user.subscription.expiryDate).getTime();
-                console.log('Current date:', currentDate);
-                console.log('Current plan expiry date:', currentExpiry);
-
-                // Prevent downgrading if user tries to select a plan with a lower businessLimit
-                if (subscriptionPlan.businessLimit < currentPlan.businessLimit) {
-                    if (currentDate < currentExpiry) {
-                        console.log('Attempted to downgrade to a plan with a lower business limit before expiry.');
-                        return res.status(400).json({ message: 'You cannot downgrade your plan until the current plan expires.' });
-                    }
-                }
-
-                // If upgrading to a new plan (not the same as current plan)
-                if (subscriptionPlan.name.toLowerCase() !== currentPlan.name.toLowerCase()) {
-                    console.log('Upgrading to a new plan. Resetting expiry date with new plan duration.');
-                    user.subscription.expiryDate = new Date(Date.now() + subscriptionPlan.duration * 30 * 24 * 60 * 60 * 1000);
-                    user.subscription.name = subscriptionPlan.name;
-
-                    // Update the user's business limit if upgrading
-                    if (subscriptionPlan.businessLimit > currentPlan?.businessLimit) {
-                        console.log('Upgrading business limit to:', subscriptionPlan.businessLimit);
-                        user.subscription.businessLimit = subscriptionPlan.businessLimit;
-                    }
-                } else {
-                    // If same plan is purchased, extend the expiry date
-                    console.log('Renewing the same plan. Extending expiry date.');
-                    user.subscription.expiryDate = new Date(currentExpiry + subscriptionPlan.duration * 30 * 24 * 60 * 60 * 1000);
-                }
-
+            // If upgrading to a new plan (not the same as current plan)
+            if (subscriptionPlan.name.toLowerCase() !== currentPlan.name.toLowerCase()) {
+                user.subscription.businessLimit = subscriptionPlan.businessLimit; // Update user's business limit
+                user.subscription.expiryDate = new Date(Date.now() + subscriptionPlan.duration * 30 * 24 * 60 * 60 * 1000); // Reset expiry date with new plan duration
             } else {
-                // First-time subscription
-                console.log('First-time subscription. Setting plan, start date, and expiry date.');
-                user.subscription.plan = plan;
-                user.subscription.startDate = Date.now();
-                user.subscription.expiryDate = new Date(Date.now() + subscriptionPlan.duration * 30 * 24 * 60 * 60 * 1000);
+                // If the same plan is purchased, extend the expiry date
+                user.subscription.expiryDate = new Date(currentExpiry + subscriptionPlan.duration * 30 * 24 * 60 * 60 * 1000); // Extend expiry date
             }
-
-            console.log('Saving updated user subscription information.');
-            await user.save();
-
-            console.log('Subscription updated successfully.');
-            res.status(200).json({
-                message: 'Subscription plan updated successfully',
-                subscription: {
-                    plan: user.subscription.plan,
-                    startDate: user.subscription.startDate,
-                    expiryDate: user.subscription.expiryDate
-                }
-            });
         } else {
-            console.log('User not found.');
-            res.status(404).json({ message: 'User not found' });
+            // First-time subscription
+            user.subscription = {
+                plan,
+                startDate: currentDate, // Set start date to current time
+                expiryDate: new Date(currentDate + subscriptionPlan.duration * 30 * 24 * 60 * 60 * 1000) // Set expiry date based on selected plan's duration
+            };
         }
+
+        // Save updated user subscription information
+        await user.save();
+        res.status(200).json({
+            message: 'Subscription plan updated successfully',
+            subscription: {
+                plan: user.subscription.plan,
+                startDate: user.subscription.startDate,
+                expiryDate: user.subscription.expiryDate
+            }
+        });
     } catch (error) {
-        console.log('Error occurred:', error.message);
-        res.status(500).json({ message: error.message });
+        console.error('Error occurred:', error.message);
+        res.status(500).json({ message: error.message }); // Handle errors
     }
 };
-
 
 async function retrieveSession(sessionId) {
     try {
