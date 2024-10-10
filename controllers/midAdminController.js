@@ -30,8 +30,8 @@ async function uploadToAzureBlob(fileBuffer, fileName) {
 
 
 async function uploadDesign(req, res) {
-    const userId = req.user._id; // Ensure `req.user` has the `_id` property
-    const businessId = req.query.businessId || null; // Extract businessId from query parameters, default to empty string
+    const userId = req.user._id;  // Ensure `req.user` has the `_id` property
+    let businessId = req.query.businessId || '';  // Default to an empty string if not provided
 
     try {
         // Check if user is a mid admin
@@ -40,15 +40,19 @@ async function uploadDesign(req, res) {
             return res.status(403).json({ message: 'You are not authorized to upload designs' });
         }
 
-        // Validate businessId if provided
-        if (businessId) {
+        // Validate businessId if provided (and not an empty string)
+        if (businessId && businessId.trim() !== '') {
             if (!mongoose.Types.ObjectId.isValid(businessId)) {
                 return res.status(400).json({ message: 'Invalid business ID format' });
             }
+
             const business = await Business.findById(businessId);
             if (!business) {
                 return res.status(400).json({ message: 'Business not found' });
             }
+        } else {
+            // Set businessId to empty string if it's null or empty
+            businessId = '';
         }
 
         // Ensure files are uploaded
@@ -67,7 +71,7 @@ async function uploadDesign(req, res) {
         const newDesigns = designUrls.map(designUrl => ({
             fileUrl: designUrl,
             uploadedBy: userId,
-            businessId: businessId // Assign businessId (can be an empty string)
+            businessId: businessId // Assign businessId (can be empty string)
         }));
 
         const savedDesigns = await AdBannerDesign.insertMany(newDesigns);
