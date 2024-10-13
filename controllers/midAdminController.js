@@ -169,12 +169,7 @@ async function updateCampaignStatus(req, res) {
 
 async function getAllDesignRequests(req, res) {
     try {
-        const userId = req.params.userId;
-
-        // Validation: Check if userId is a valid ObjectId
-        if (!mongoose.Types.ObjectId.isValid(userId)) {
-            return res.status(400).json({ message: "Invalid userId provided" });
-        }
+        const userId = req.query.userId;
 
         // Check if user exists
         const user = await User.findById(userId);
