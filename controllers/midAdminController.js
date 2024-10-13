@@ -169,11 +169,28 @@ async function updateCampaignStatus(req, res) {
 
 
 // Function to get all design requests
+const mongoose = require('mongoose');
+const User = require('../models/User'); // Assuming the User model is in ../models/User
+
 async function getAllDesignRequests(req, res) {
     try {
+        const userId = req.params.userId;
+
+        // Validation: Check if userId is a valid ObjectId
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ message: "Invalid userId provided" });
+        }
+
+        // Check if user exists
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Fetch only the approved design requests, where the business is managed by the userId
         const requests = await CustomDesignRequest.find({
-            user: { $ne: null },
-            business: { $ne: null }
+            status: 'accepted', // Filter by approved requests only
+            business: { $ne: null } // Ensure the request has a business attached
         })
         .populate({
             path: 'user',
@@ -182,21 +199,24 @@ async function getAllDesignRequests(req, res) {
         })
         .populate({
             path: 'business',
-            match: { _id: { $ne: null } } // Ensure populated business is not null
+            match: {
+                managedBy: userId, // Filter businesses managed by the current user
+                _id: { $ne: null } // Ensure populated business is not null
+            }
         });
 
-        // Filter out requests where user or business is still null after populate
+        // Filter out requests where business is still null after populate (i.e., not managed by this user)
         const filteredRequests = requests.filter(
-            (request) => request.user !== null && request.business !== null
+            (request) => request.business !== null // Keep only requests with businesses managed by this user
         );
 
+        // Return the filtered list of design requests
         res.status(200).json(filteredRequests);
     } catch (error) {
+        console.error('Error fetching design requests:', error);
         res.status(500).json({ message: error.message });
     }
 }
-
-
 
 
 // Function to update the status of a design request
