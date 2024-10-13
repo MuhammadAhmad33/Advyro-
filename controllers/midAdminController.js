@@ -167,11 +167,6 @@ async function updateCampaignStatus(req, res) {
     }
 }
 
-
-// Function to get all design requests
-const mongoose = require('mongoose');
-const User = require('../models/User'); // Assuming the User model is in ../models/User
-
 async function getAllDesignRequests(req, res) {
     try {
         const userId = req.params.userId;
