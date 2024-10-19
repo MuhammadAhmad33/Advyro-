@@ -280,11 +280,20 @@ async function getBusinessesByStatus(req, res) {
     const { status } = req.params; // 'pending', 'accepted', 'rejected'
 
     try {
-        // Fetch businesses based on status and populate owner details
-        const businesses = await Business.find({ status }).populate({
-            path: 'owner',
-            select: 'name email _id', // Ensure both email and _id are selected
-        });
+        // Fetch businesses based on status and populate owner, managedBy, and statusChangedBy details
+        const businesses = await Business.find({ status })
+            .populate({
+                path: 'owner',
+                select: 'fullname email _id', // Ensure fullname, email, and _id are selected
+            })
+            .populate({
+                path: 'statusChangedBy',  // Populate the statusChangedBy field
+                select: 'fullname',   // Select the fullname for statusChangedBy user
+            })
+            .populate({
+                path: 'managedBy',  // Populate the managedBy field
+                select: 'fullname',   // Select the fullname for managedBy user
+            });
 
         // Filter out businesses where owner is null or missing _id or email
         const validBusinesses = businesses.filter(business => {
@@ -292,8 +301,23 @@ async function getBusinessesByStatus(req, res) {
             return owner && owner._id && owner.email;
         });
 
+        // Helper function to capitalize the first letter of a word
+        const capitalizeFirstLetter = (string) => {
+            return string.charAt(0).toUpperCase() + string.slice(1);
+        };
+
+        // Map businesses to format statusChangedBy, managedBy, and rejectionReason fields
+        const formattedBusinesses = validBusinesses.map(business => ({
+            ...business._doc, // Spread existing business data
+            statusChangedBy: business.statusChangedBy 
+                ? `${capitalizeFirstLetter(business.status)} by ${business.statusChangedBy.fullname}` 
+                : "", // Format like "Rejected by Fullname" or return an empty string
+            managedBy: business.managedBy ? business.managedBy.fullname : "", // Return fullname or empty string for managedBy
+            rejectionReason: business.rejectionReason || "", // Return rejectionReason or empty string if it's null or not available
+        }));
+
         // Return businesses filtered by status and valid owner
-        res.status(200).json({ businesses: validBusinesses });
+        res.status(200).json({ businesses: formattedBusinesses });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
