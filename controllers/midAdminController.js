@@ -179,7 +179,7 @@ async function getAllDesignRequests(req, res) {
 
         // Fetch only the approved design requests, where the business is managed by the userId
         const requests = await CustomDesignRequest.find({
-            status: 'accepted', // Filter by approved requests only
+            status: 'pending', // Filter by approved requests only
             business: { $ne: null } // Ensure the request has a business attached
         })
         .populate({
