@@ -205,8 +205,7 @@ async function resetPassword(req, res) {
         return res.status(400).json({ errors: errors.array() });
     }
 
-    const userId = req.params.userId; // Get userId from request parameters
-    const { newPassword, confirmPassword } = req.body;
+    const { email, newPassword, confirmPassword } = req.body;
 
     try {
         // Check if the new passwords match
@@ -214,8 +213,8 @@ async function resetPassword(req, res) {
             return res.status(400).json({ message: 'Passwords do not match' });
         }
 
-        // Find the user by ID
-        const user = await User.findById(userId);
+        // Find the user by email
+        const user = await User.findOne({ email });
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
@@ -230,6 +229,7 @@ async function resetPassword(req, res) {
         res.status(500).json({ message: error.message });
     }
 }
+
 
 async function sendNotification(req, res) {
     const { title, body, fcmToken } = req.body;
