@@ -75,7 +75,7 @@ async function uploadDesign(req, res) {
 
         const savedDesigns = await AdBannerDesign.insertMany(newDesigns);
         // Delete custom design request if requestId is provided and valid
-        if (requestId && mongoose.Types.ObjectId.isValid(requestId)) {
+        if (requestId) {
             const requestExists = await CustomDesignRequest.findById(requestId);
             if (requestExists) {
     
@@ -90,7 +90,7 @@ async function uploadDesign(req, res) {
                 return res.status(404).json({ message: 'Custom design request not found' });
             }
         } else if (requestId) {
-            return res.status(400).json({ message: 'Invalid request ID format' });
+            return res.status(400).json({ message: 'requestId is required' });
         }
 
         res.status(201).json({ message: 'Designs uploaded successfully', designs: savedDesigns });
