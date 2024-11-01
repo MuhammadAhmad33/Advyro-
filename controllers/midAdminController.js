@@ -31,8 +31,8 @@ async function uploadToAzureBlob(fileBuffer, fileName) {
 
 async function uploadDesign(req, res) {
     const userId = req.user._id;
-    let businessId = req.query.businessId || '';  // Default to an empty string if not provided
-    let requestId = req.query.requestId;
+    let businessId = req.query.businessId || '';
+    let requestId = req.body.requestId;
 
     try {
         const user = await User.findById(userId);
@@ -70,14 +70,25 @@ async function uploadDesign(req, res) {
         const newDesigns = designUrls.map(designUrl => ({
             fileUrl: designUrl,
             uploadedBy: userId,
-            businessId: businessId  // Ensure it's saved as an empty string if not provided
+            businessId: businessId
         }));
 
         const savedDesigns = await AdBannerDesign.insertMany(newDesigns);
-
         // Delete custom design request if requestId is provided and valid
         if (requestId && mongoose.Types.ObjectId.isValid(requestId)) {
-            await CustomDesignRequest.findByIdAndDelete(requestId);
+            const requestExists = await CustomDesignRequest.findById(requestId);
+            if (requestExists) {
+    
+                const deleteResult = await CustomDesignRequest.findByIdAndDelete(requestId);
+                if (deleteResult) {
+        
+                } else {
+        
+                }
+            } else {
+    
+                return res.status(404).json({ message: 'Custom design request not found' });
+            }
         } else if (requestId) {
             return res.status(400).json({ message: 'Invalid request ID format' });
         }
