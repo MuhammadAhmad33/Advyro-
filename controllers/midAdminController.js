@@ -9,6 +9,7 @@ const path = require('path');
 const AdBannerDesign = require('../models/designs');
 const config = require('../config/config')
 const mongoose = require('mongoose');
+const Wallet = require('../models/wallet');
 
 // Azure Blob Storage setup
 const blobServiceClient = BlobServiceClient.fromConnectionString(config.AZURE_STORAGE_CONNECTION_STRING);
@@ -170,6 +171,34 @@ async function updateCampaignStatus(req, res) {
         campaign.statusChangedBy = userId; // Set the mid-admin who changed the status
         if (status === 'rejected' && rejectionReason) {
             campaign.rejectionReason = rejectionReason;
+            const refundAmount = campaign.cost; // Assuming `cost` is a field in your campaign model
+            const wallet = await Wallet.findOne({ user_id: userId });
+
+            if (!wallet) {
+                // Create a new wallet if it doesn't exist
+                const newWallet = new Wallet({
+                    user_id: userId,
+                    balance: refundAmount,
+                    last_updated: Date.now(),
+                });
+                await newWallet.save();
+            } else {
+                // Add the refund amount to the existing wallet
+                wallet.balance += refundAmount;
+                wallet.last_updated = Date.now();
+                await wallet.save();
+            }
+
+            // Create a refund transaction
+            const transaction = new Transaction({
+                user_id: userId,
+                type: 'payment', // Type is payment since it’s a refund
+                amount: refundAmount,
+                status: 'completed',
+                created_at: Date.now(),
+            });
+            await transaction.save();
+
         } else {
             campaign.rejectionReason = undefined; // Clear the rejection reason if not rejected
         }

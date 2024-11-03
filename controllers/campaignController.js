@@ -187,12 +187,28 @@ async function cancelCampaign(req, res) {
             return res.status(403).json({ message: 'You are not authorized to cancel this campaign' });
         }
 
-        // Change the status to 'cancelled'
+        // Calculate refund based on remaining days
+        const currentDate = new Date();
+        const startDate = new Date(campaign.dateSchedule.startDate);
+        const endDate = new Date(campaign.dateSchedule.endDate);
+        const totalCost = campaign.cost;
+
+        if (currentDate >= endDate) {
+            return res.status(400).json({ message: 'Campaign has already ended and cannot be cancelled' });
+        }
+
+        const totalCampaignDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)); // Total days between start and end dates
+        const dailyCost = totalCost / totalCampaignDays; // Calculate daily cost
+
+        // Calculate remaining days
+        const remainingDays = Math.ceil((endDate - currentDate) / (1000 * 60 * 60 * 24));
+        const refundAmount = dailyCost * remainingDays;
+
+        // Update campaign status to 'cancelled'
         campaign.status = 'cancelled';
         await campaign.save();
 
-        // Refund logic
-        const refundAmount = campaign.cost; // Assuming `cost` is a field in your campaign model
+        // Process refund
         const wallet = await Wallet.findOne({ user_id: userId });
 
         if (!wallet) {
@@ -213,7 +229,7 @@ async function cancelCampaign(req, res) {
         // Create a refund transaction
         const transaction = new Transaction({
             user_id: userId,
-            type: 'payment', // Type is payment since it’s a refund
+            type: 'refund', // Marking it as a refund transaction
             amount: refundAmount,
             status: 'completed',
             created_at: Date.now(),
@@ -221,15 +237,18 @@ async function cancelCampaign(req, res) {
         await transaction.save();
 
         res.status(200).json({
-            message: 'Campaign cancelled successfully, and refund processed',
+            message: 'Campaign cancelled successfully, and partial refund processed',
             campaign,
             refundAmount,
+            remainingDays,
+            dailyCost
         });
 
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 }
+
 
 async function getCampaignsByStatus(req, res) {
     const userId = req.user._id; // User ID from request (Ensure `req.user` has the `_id` property)
