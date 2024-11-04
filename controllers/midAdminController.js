@@ -10,6 +10,7 @@ const AdBannerDesign = require('../models/designs');
 const config = require('../config/config')
 const mongoose = require('mongoose');
 const Wallet = require('../models/wallet');
+const Transaction = require('../models/transaction');
 
 // Azure Blob Storage setup
 const blobServiceClient = BlobServiceClient.fromConnectionString(config.AZURE_STORAGE_CONNECTION_STRING);
@@ -162,22 +163,33 @@ async function updateCampaignStatus(req, res) {
             return res.status(403).json({ message: 'You are not authorized to update campaign status' });
         }
 
-        const campaign = await Campaign.findById(campaignId);
+        const campaign = await Campaign.findById(campaignId).populate({
+            path: 'business',
+            populate: {
+                path: 'owner',
+                model: 'User'
+            }
+        });
+        
         if (!campaign) {
             return res.status(404).json({ message: 'Campaign not found' });
         }
 
+        const businessOwnerId = campaign.business.owner._id; // Get the owner ID from the business
+
         campaign.status = status;
-        campaign.statusChangedBy = userId; // Set the mid-admin who changed the status
+        campaign.statusChangedBy = userId;
+
         if (status === 'rejected' && rejectionReason) {
             campaign.rejectionReason = rejectionReason;
-            const refundAmount = campaign.cost; // Assuming `cost` is a field in your campaign model
-            const wallet = await Wallet.findOne({ user_id: userId });
+            const refundAmount = campaign.cost;
+
+            const wallet = await Wallet.findOne({ user_id: businessOwnerId });
 
             if (!wallet) {
                 // Create a new wallet if it doesn't exist
                 const newWallet = new Wallet({
-                    user_id: userId,
+                    user_id: businessOwnerId,
                     balance: refundAmount,
                     last_updated: Date.now(),
                 });
@@ -189,10 +201,10 @@ async function updateCampaignStatus(req, res) {
                 await wallet.save();
             }
 
-            // Create a refund transaction
+            // Create a refund transaction for the business owner
             const transaction = new Transaction({
-                user_id: userId,
-                type: 'payment', // Type is payment since it’s a refund
+                user_id: businessOwnerId,
+                type: 'refund', // Set type as refund
                 amount: refundAmount,
                 status: 'completed',
                 created_at: Date.now(),
@@ -202,17 +214,17 @@ async function updateCampaignStatus(req, res) {
         } else {
             campaign.rejectionReason = undefined; // Clear the rejection reason if not rejected
         }
+
         await campaign.save();
 
-        // Populate the statusChangedBy field with the user's name
-        const updatedCampaign = await Campaign.findById(campaignId)
-        .populate('statusChangedBy', 'fullname email');
+        const updatedCampaign = await Campaign.findById(campaignId).populate('statusChangedBy', 'fullname email');
 
         res.status(200).json({ message: `Campaign ${status} successfully`, campaign: updatedCampaign });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 }
+
 
 async function getAllDesignRequests(req, res) {
     try {
