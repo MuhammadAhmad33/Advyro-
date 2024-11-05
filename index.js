@@ -37,9 +37,17 @@ app.use((err, req, res, next) => {
 });
 
 // Connect to MongoDB
-mongoose.connect(config.mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
-    .then(() => console.log('MongoDB connected'))
-    .catch(err => console.error('MongoDB connection error:', err));
+mongoose.connect(config.mongoURI, {
+    // Removed deprecated options
+    connectTimeoutMS: 30000, // Increase connection timeout if necessary
+})
+.then(() => {
+    console.log('MongoDB connected');
+})
+.catch(err => {
+    console.error('MongoDB connection error:', err);
+    process.exit(1); // Exit the process if connection fails
+});
 
 // Start the server
 const PORT = process.env.PORT || 7002;

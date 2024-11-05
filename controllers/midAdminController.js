@@ -152,17 +152,28 @@ async function changeBusinessStatus(req, res) {
 async function updateCampaignStatus(req, res) {
     const { campaignId, status, rejectionReason } = req.body;
     const userId = req.user._id;
+    console.log('Received request to update campaign status:', { campaignId, status, rejectionReason, userId });
 
     if (!['approved', 'rejected'].includes(status)) {
+        console.log('Invalid status:', status);
         return res.status(400).json({ message: 'Invalid status' });
     }
 
     try {
+        console.log('Fetching user by ID:', userId);
         const user = await User.findById(userId);
+        if (!user) {
+            console.log('User not found:', userId);
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        console.log('User role:', user.role);
         if (user.role !== 'mid admin') {
+            console.log('Unauthorized user attempt to update campaign status:', userId);
             return res.status(403).json({ message: 'You are not authorized to update campaign status' });
         }
 
+        console.log('Fetching campaign by ID:', campaignId);
         const campaign = await Campaign.findById(campaignId).populate({
             path: 'business',
             populate: {
@@ -172,55 +183,66 @@ async function updateCampaignStatus(req, res) {
         });
         
         if (!campaign) {
+            console.log('Campaign not found:', campaignId);
             return res.status(404).json({ message: 'Campaign not found' });
         }
 
-        const businessOwnerId = campaign.business.owner._id; // Get the owner ID from the business
+        const businessOwnerId = campaign.business.owner._id;
+        console.log('Business owner ID:', businessOwnerId);
 
         campaign.status = status;
         campaign.statusChangedBy = userId;
 
         if (status === 'rejected' && rejectionReason) {
+            console.log('Setting rejection reason and processing refund');
             campaign.rejectionReason = rejectionReason;
             const refundAmount = campaign.cost;
 
-            const wallet = await Wallet.findOne({ user_id: businessOwnerId });
+            console.log('Checking wallet for business owner:', businessOwnerId);
+            let wallet = await Wallet.findOne({ user_id: businessOwnerId });
 
             if (!wallet) {
-                // Create a new wallet if it doesn't exist
-                const newWallet = new Wallet({
+                console.log('Wallet not found, creating new wallet for owner:', businessOwnerId);
+                wallet = new Wallet({
                     user_id: businessOwnerId,
                     balance: refundAmount,
                     last_updated: Date.now(),
                 });
-                await newWallet.save();
+                await wallet.save();
+                console.log('New wallet created with refund amount:', refundAmount);
             } else {
-                // Add the refund amount to the existing wallet
+                console.log('Updating existing wallet with refund amount:', refundAmount);
                 wallet.balance += refundAmount;
                 wallet.last_updated = Date.now();
                 await wallet.save();
+                console.log('Wallet updated:', wallet);
             }
 
-            // Create a refund transaction for the business owner
+            console.log('Creating refund transaction for business owner:', businessOwnerId);
             const transaction = new Transaction({
                 user_id: businessOwnerId,
-                type: 'refund', // Set type as refund
+                type: 'refund',
                 amount: refundAmount,
                 status: 'completed',
                 created_at: Date.now(),
             });
             await transaction.save();
+            console.log('Refund transaction created:', transaction);
 
         } else {
-            campaign.rejectionReason = undefined; // Clear the rejection reason if not rejected
+            console.log('Clearing rejection reason as campaign is not rejected');
+            campaign.rejectionReason = undefined;
         }
 
         await campaign.save();
+        console.log('Campaign status updated and saved:', { campaignId, status });
 
         const updatedCampaign = await Campaign.findById(campaignId).populate('statusChangedBy', 'fullname email');
+        console.log('Updated campaign fetched:', updatedCampaign);
 
         res.status(200).json({ message: `Campaign ${status} successfully`, campaign: updatedCampaign });
     } catch (error) {
+        console.error('Error updating campaign status:', error.message);
         res.status(500).json({ message: error.message });
     }
 }
