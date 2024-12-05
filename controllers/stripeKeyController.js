@@ -8,24 +8,24 @@ async function getStripeKey(req, res) {
         if (!stripeKey) {
             return res.status(404).json({ message: 'Stripe key not found' });
         }
-        return res.status(200).json({ secretKey: stripeKey.secretKey });
+        return res.status(200).json({ secretKey: stripeKey.secretKey, publishableKey: stripeKey.publishableKey });
     } catch (error) {
         return res.status(500).json({ message: error.message });
     }
 }
 
 async function updateStripeKey(req, res) {
-    const { secretKey } = req.body;
+    const { secretKey, publishableKey } = req.body;
 
     try {
     
         const stripeKey = await StripeKey.findOneAndUpdate(
             {},
-            { secretKey },
+            { secretKey, publishableKey },
             { new: true, upsert: true }
         );
 
-        return res.status(200).json({ message: 'Stripe key updated successfully', stripeKey });
+        return res.status(200).json({ message: 'Stripe keys updated successfully', stripeKey });
     } catch (error) {
         return res.status(500).json({ message: error.message });
     }
