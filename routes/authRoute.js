@@ -43,7 +43,7 @@ router.post('/forgot-password', [
     check('email').isEmail().withMessage('Valid email is required')
 ], authController.forgotPassword);
 
-router.post('/reset-password/:userId', [
+router.post('/reset-password', [
     check('newPassword').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long')
 ], authController.resetPassword);
 
